@@ -5,7 +5,7 @@ import java.io.File
 import beast.evolution.tree.Node
 import main.scala.annotation.AnnotationsManager
 import main.scala.node.RichNode
-import main.scala.stats.Event
+import main.scala.stats.Barcode
 
 import scala.collection.mutable.HashMap
 
@@ -36,7 +36,7 @@ object EventSplitter {
 
     // split the events into the root for the first X sites,
     // and sub-tree for individual nodes
-    val rootTreeContainer = EventContainer.subset(eventContainer, sites, eventContainer.eventToNumber, sample)
+    val rootTreeContainer = EventContainer.subset(eventContainer, sites, sample)
 
     // run the root tree, and fetch the results
     println("Processing the root tree with nodes " + rootTreeContainer._1.events.map{evt => evt.events.mkString("_")}.mkString(", "))

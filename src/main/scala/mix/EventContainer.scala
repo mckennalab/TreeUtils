@@ -1,8 +1,10 @@
 package main.scala.mix
 
-import main.scala.stats.Event
+import main.scala.stats.Barcode
 
 import scala.collection.mutable.HashMap
+
+import scala.collection.immutable.Set
 
 /**
   * the basic event container trait. everything we need for creating a tree from events
@@ -10,19 +12,21 @@ import scala.collection.mutable.HashMap
 trait EventContainer {
   def sample: String
 
-  def events: Array[Event]
+  def events: Array[Barcode]
 
-  def dangerAddEvent(event: Event)
+  def eventToCount(event: String): Int
 
-  def eventToCount: HashMap[String, Int]
+  def eventToSites(event: String): Set[Int]
 
-  def eventToSites: HashMap[String, Set[Int]]
+  def columnToEvent(col: Int): EventInformation
 
-  def numberToEvent: HashMap[Int, String]
+  def eventToColumn(event: String): Int
 
-  def eventToNumber: HashMap[String, Int]
+  def cellToAnnotations(event: String): HashMap[String, String]
 
-  def cellToAnnotations: HashMap[String, HashMap[String, String]]
+  def rawAnnotations: HashMap[String, HashMap[String, String]]
+
+  def allEvents: List[String]
 
   def numberOfTargets: Int
 
@@ -38,11 +42,7 @@ trait EventContainer {
   * @param meventToNumber convert an event to it's index
   */
 class EventContainerImpl(msample: String,
-                         mevents: Array[Event],
-                         meventToCount: HashMap[String, Int],
-                         meventToSites: HashMap[String, Set[Int]],
-                         mnumberToEvent: HashMap[Int, String],
-                         meventToNumber: HashMap[String, Int],
+                         mevents: Array[Barcode],
                          meventToAnnotations: HashMap[String, HashMap[String, String]],
                          mnumberOfTargets: Int) extends EventContainer {
 
@@ -50,19 +50,21 @@ class EventContainerImpl(msample: String,
 
   def sample: String = msample
 
-  def events: Array[Event] = mTotalEvents
+  def events: Array[Barcode] = mTotalEvents
 
-  def dangerAddEvent(event: Event) { mTotalEvents :+= event}
+  def eventToCount(event: String): Int = EventInformation.event(event).count
 
-  def eventToCount: HashMap[String, Int] = meventToCount
+  def eventToSites(event: String): Set[Int] = EventInformation.event(event).positions
 
-  def eventToSites: HashMap[String, Set[Int]] = meventToSites
+  def columnToEvent(col: Int): EventInformation = EventInformation.column(col)
 
-  def numberToEvent: HashMap[Int, String] = mnumberToEvent
+  def eventToColumn(event: String): Int = EventInformation.event(event).columnNumber
 
-  def eventToNumber: HashMap[String, Int] = meventToNumber
+  def cellToAnnotations(event: String): HashMap[String, String] = meventToAnnotations(event)
 
-  def cellToAnnotations: HashMap[String, HashMap[String, String]] = meventToAnnotations
+  def rawAnnotations: HashMap[String, HashMap[String, String]] = meventToAnnotations
+
+  def allEvents: List[String] = EventInformation.orderedEvents.map{t => t.eventString}.toList
 
   def numberOfTargets: Int = mnumberOfTargets
 
@@ -82,7 +84,7 @@ class EventContainerImpl(msample: String,
   * @param eventContainer   the original events container
   * @param eventsToChildren the mapping of new ID to old ID
   */
-case class SubsettedEventContainer(mevents: Array[Event],
+case class SubsettedEventContainer(mevents: Array[Barcode],
                                    eventContainer: EventContainer,
                                    eventsToChildren: HashMap[String, Array[String]]) extends EventContainer {
 
@@ -90,19 +92,19 @@ case class SubsettedEventContainer(mevents: Array[Event],
 
   def sample: String = eventContainer.sample
 
-  def events: Array[Event] = mTotalEvents
+  def events: Array[Barcode] = mTotalEvents
 
-  def dangerAddEvent(event: Event) { mTotalEvents :+= event}
+  def eventToCount(event: String): Int = eventContainer.eventToCount(event)
 
-  def eventToCount: HashMap[String, Int] = eventContainer.eventToCount
+  def eventToSites(event: String): Set[Int] = eventContainer.eventToSites(event)
 
-  def numberToEvent: HashMap[Int, String] = eventContainer.numberToEvent
+  def columnToEvent(col: Int): EventInformation = eventContainer.columnToEvent(col)
 
-  def eventToSites: HashMap[String, Set[Int]] = eventContainer.eventToSites
+  def eventToColumn(event: String): Int = eventContainer.eventToColumn(event)
 
-  def eventToNumber: HashMap[String, Int] = eventContainer.eventToNumber
+  def cellToAnnotations(event: String): HashMap[String, String] = eventContainer.cellToAnnotations(event)
 
-  def cellToAnnotations: HashMap[String, HashMap[String, String]] = eventContainer.cellToAnnotations
+  def rawAnnotations: HashMap[String, HashMap[String, String]] = eventContainer.rawAnnotations
 
   def numberOfTargets: Int = eventContainer.numberOfTargets
 
@@ -112,6 +114,8 @@ case class SubsettedEventContainer(mevents: Array[Event],
       println(event.prettyString())
     }}
   }
+
+  override def allEvents: List[String] = mevents.flatMap{e => e.events}.toList
 }
 
 object EventContainer {
@@ -125,7 +129,6 @@ object EventContainer {
     */
   def subset(container: EventContainer,
              sitesToCapture: Array[Tuple2[Int, String]],
-             eventsToIDs: HashMap[String, Int],
              sample: String): Tuple2[EventContainer, HashMap[String, Array[String]]] = {
 
     container.events.foreach{event => println("INPUT NODE " + event.prettyString())}
@@ -220,8 +223,7 @@ object EventContainer {
     (SubsettedEventContainer(nameToChildren.map { case (name, ids) => {
       println("Event in subset: " + name)
       val evt = namesToEvents(name)
-      Event(evt.split(strToken),
-        evt.split(strToken).map { st => eventsToIDs(st) },
+      Barcode(evt.split(strToken),
         eventsToCounts(evt),
         eventsToProps(evt),
         sample,
@@ -241,11 +243,7 @@ object EventContainer {
 
     new EventContainerImpl(container.sample,
       newEvents,
-      container.eventToCount,
-      container.eventToSites,
-      container.numberToEvent,
-      container.eventToNumber,
-      container.cellToAnnotations,
+      container.rawAnnotations,
       container.numberOfTargets)
 
 

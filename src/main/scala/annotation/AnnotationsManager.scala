@@ -21,11 +21,11 @@ class AnnotationsManager(evtContainer: EventContainer) {
   val cladeMapping = new HashMap[String,CladeEntry]()
   val sampleTotals = new HashMap[String,Int]()
 
-  var eventDefinitionsToAnnotations = evtContainer.cellToAnnotations
+  var eventDefinitionsToAnnotations = evtContainer.rawAnnotations
 
   evtContainer.events.foreach{evt => {
     println("adding event with " + evt.events.size)
-    val annotations = evtContainer.cellToAnnotations.getOrElse(evt.name,new HashMap[String,String]())
+    val annotations = evtContainer.rawAnnotations.getOrElse(evt.name,new HashMap[String,String]())
     if (annotations.size == 0)
       println("No annotations for cell " + evt.name)
     annotationMapping(evt.name) = AnnotationEntry("UNKNOWN",evt.name,evt.count,evt.proportion,evt.events,annotations)

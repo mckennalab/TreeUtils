@@ -341,8 +341,8 @@ object RichNode {
         /* do nothing */
       }
       case ('1') => {
-        val event = eventContainer.numberToEvent(index + 1) // our first position is an edit, not NONE
-        eventContainer.eventToSites(event).foreach { site => {
+        val event = eventContainer.columnToEvent(index) // our first position is an edit, not NONE
+        event.positions.foreach { site => {
           // check to make sure we're not conflicting and overwriting an already edited site
 
           // TODO: fix this part
@@ -350,7 +350,7 @@ object RichNode {
             if (child.parsimonyEvents(site) != "NONE") {
               println("WARNING: Conflict at site " + site + " for parent " + parent.name + " for child " + child.name + " event " + event)
             } else {
-              child.parsimonyEvents(site) = event
+              child.parsimonyEvents(site) = event.eventString
             }
           }
         }

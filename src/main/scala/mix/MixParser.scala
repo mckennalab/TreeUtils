@@ -13,7 +13,7 @@ import scala.io.Source
 class MixParser(mixOutput: String, eventsToNumbers: EventContainer, treeToUse: Int, rootName: String) {
 
   // first parse out the events to number data, and make a look-up table
-  val numberToEvent = eventsToNumbers.numberToEvent
+
   val eventToSites = new mutable.HashMap[String,Array[Int]]()
   // now load all the lines
   eventsToNumbers.events.foreach{evt => {

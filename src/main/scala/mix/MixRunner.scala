@@ -1,16 +1,12 @@
 package main.scala.mix
 
-import scala.io._
 import java.io._
-import java.lang.ProcessBuilder
 
-import scala.concurrent._
 import scala.collection.JavaConversions._
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.file.Files
 
 import beast.util.TreeParser
-import main.scala.MixConfig
 import main.scala.annotation.AnnotationsManager
 import main.scala.node.{BestTree, NodeLinker, RichNode}
 
@@ -30,7 +26,7 @@ object MixRunner {
     */
   private def lowLevelProcessesMix(mixPackage: MixFilePackage): Int = {
 
-    val mixprogram = List[String]("mix")
+    val mixprogram = List[String](mixPackage.mixDirToRunIn.getAbsolutePath + File.separator + "mix")
     val pb = new ProcessBuilder(mixprogram)
 
     pb.directory(mixPackage.mixDirToRunIn)
@@ -38,7 +34,7 @@ object MixRunner {
 
     val process = pb.start()
 
-    val stdin = process.getOutputStream();
+    val stdin = process.getOutputStream()
     val writer = new BufferedWriter(new OutputStreamWriter(stdin))
 
     val a = Array(mixPackage.mixIntputFile, "P", "W", "4", "5", "Y", mixPackage.weightsFile).foreach { s =>
@@ -65,6 +61,7 @@ object MixRunner {
     println(dest.getAbsolutePath)
     dest.createNewFile
     new FileOutputStream(dest) getChannel() transferFrom(new FileInputStream(mixLocation) getChannel, 0, Long.MaxValue)
+    dest.setExecutable(true)
 
     // run and assert that we didn't fail
     assert(lowLevelProcessesMix(mixPackage) == 0)
