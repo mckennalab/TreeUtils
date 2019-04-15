@@ -1,6 +1,6 @@
 name := "TreeUtils"
 
-version := "1.1"
+version := "1.3"
 
 scalaVersion := "2.11.7"
 
