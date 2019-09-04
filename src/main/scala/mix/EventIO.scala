@@ -56,6 +56,53 @@ object EventIO {
   }
 
   /**
+    * convert text input into nodes
+    * @param allEventsFile a file with the event string first, followed by the count and proportions
+    * @param sample the sample name to use
+    * @return an array of events
+    */
+  def readCellObject(allCellsFile: File, sample: String): EventContainer = {
+
+    val cellAnnotations = new mutable.HashMap[String,HashMap[String,String]]()
+
+    // keep track of the number of lines and the next available allele (event) index
+    var linesProcessed = 0
+    var nextIndex = 1
+
+    val builder = ArrayBuffer[Barcode]()
+
+    val inputFile = Source.fromFile(allCellsFile).getLines().toArray
+    val header = inputFile(0).split("\t")
+
+
+    // process the input file
+    inputFile.slice(1,inputFile.size).zipWithIndex.foreach { case (line, index) => {
+      val lineTks = line.split("\t")
+
+      val cellID = "N" + linesProcessed
+      val hmid = lineTks(1)
+      val cells = lineTks(2)
+
+      // assign columns to the events
+      EventInformation.addEvents(hmid.replace("\"","").split("-"), 1)
+
+      // handle any annotations specified in the file
+      val annotations = new mutable.HashMap[String,String]()
+      annotations("cellIDs") = cells.replace("\"","")
+      cellAnnotations(cellID) = annotations
+
+      val evt = Barcode(hmid.replace("\"","").split("-"), 1, 1.0 / (inputFile.size - 1), sample, cellID)
+      linesProcessed += 1
+      builder += evt
+    }
+    }
+
+    val evtArray = builder.toArray
+    new EventContainerImpl(sample,evtArray,cellAnnotations,evtArray(0).events.size)
+  }
+
+
+  /**
     * rescale occurrence values for MIX to the range of characters it accepts
     *
     * @param value the value to rescale
@@ -79,8 +126,8 @@ object EventIO {
     */
   def writeMixPackage(mixPackage: MixFilePackage, eventsContainer: EventContainer) = {
     val weightFile = new PrintWriter(mixPackage.weightsFile)
-    val mixInputFile = new PrintWriter(mixPackage.mixIntputFile)
-    println("writing " + mixPackage.weightsFile + " and " + mixPackage.mixIntputFile)
+    val mixInputFile = new PrintWriter(mixPackage.mixInputAlleles)
+    println("writing " + mixPackage.weightsFile + " and " + mixPackage.mixInputAlleles)
 
     // normalize the weights to the range of values we have
     val maxCount = eventsContainer.allEvents.map{mp => eventsContainer.eventToCount(mp)}.max

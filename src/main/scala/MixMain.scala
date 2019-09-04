@@ -41,6 +41,7 @@ case class MixConfig(allEventsFile: Option[File] = None,
                      mixLocation: Option[File] = None,
                      allCellAnnotations: Option[File] = None,
                      sample: String = "UNKNOWN",
+                     useCached: Boolean = false,
                      firstX: Int = -1)
 
 /**
@@ -53,16 +54,17 @@ object MixMain extends App {
     head("MixToTree", "1.3")
 
     // *********************************** Inputs *******************************************************
-    opt[File]("allEventsFile") required() valueName ("<file>") action { (x, c) => c.copy(allEventsFile = Some(x)) } text ("the input stats file")
-    opt[File]("mixRunLocation") required() valueName ("<file>") action { (x, c) => c.copy(mixRunLocation = Some(x)) } text ("the tree to produce")
-    opt[Int]("subsetFirstX") valueName ("<int>") action { (x, c) => c.copy(firstX = x) } text ("the tree to produce")
-    opt[File]("outputTree") required() valueName ("<file>") action { (x, c) => c.copy(outputTree = Some(x)) } text ("the tree to produce")
-    opt[File]("allCells") valueName ("<file>") action { (x, c) => c.copy(allCellAnnotations = Some(x)) } text ("the tree to produce")
-    opt[String]("sample") required() valueName ("<file>") action { (x, c) => c.copy(sample = x) } text ("the tree to produce")
-    opt[File]("mixEXEC") required() valueName ("<file>") action { (x, c) => c.copy(mixLocation = Some(x)) } text ("where to find mix")
+    opt[File]("allEventsFile")  required()  valueName ("<file>") action { (x, c) => c.copy(allEventsFile = Some(x)) } text ("the input file containing information about the CRISPR events over the target sequences")
+    opt[File]("mixRunLocation") required()  valueName ("<file>") action { (x, c) => c.copy(mixRunLocation = Some(x)) } text ("what directory should we run MIX in ")
+    opt[File]("outputTree")     required()  valueName ("<file>") action { (x, c) => c.copy(outputTree = Some(x)) } text ("the output tree we'll produce")
+    opt[String]("sample")       required()  valueName ("<file>") action { (x, c) => c.copy(sample = x) } text ("the sample name")
+    opt[File]("mixEXEC")        required()  valueName ("<file>") action { (x, c) => c.copy(mixLocation = Some(x)) } text ("where to find the MIX executable")
+    opt[Int]("subsetFirstX")                valueName ("<int>")  action { (x, c) => c.copy(firstX = x) } text ("Use the first X targets to build the tree, then use the remaining targets to build sub-trees")
+    opt[Unit]("useCached")                  valueName ("<file>") action { (x, c) => c.copy(useCached = true) } text ("should we used a cached (previous) MIX run in the specified directory")
+    opt[File]("annotations")                valueName ("<file>") action { (x, c) => c.copy(allCellAnnotations = Some(x)) } text ("the annotation file for individual cells")
 
     // some general command-line setup stuff
-    note("process a stats file into a JSON tree file\n")
+    note("process a GESTALT input file into a JSON tree file using PHYLIP MIX\n")
     help("help") text ("prints the usage information you see here")
   }
 
@@ -72,25 +74,24 @@ object MixMain extends App {
     MixRunner.mixLocation = config.mixLocation.get
 
     // parse the all events file into an object
-    val readEventsObj = EventIO.readEventsObject(config.allEventsFile.get, config.sample)
+    val inputEvents = config.allEventsFile.get.getAbsolutePath
+
+    val readEventsObj = if (inputEvents endsWith "allReadCounts")
+      EventIO.readEventsObject(config.allEventsFile.get, config.sample)
+    else if (inputEvents endsWith ".txt") // for Bushra
+      EventIO.readCellObject(config.allEventsFile.get, config.sample)
+    else
+      throw new IllegalStateException("Unable to determine filetype for " + inputEvents)
 
     // load up any annotations we have
     val annotationMapping = new AnnotationsManager(readEventsObj)
 
-    val rootNode = if (config.firstX > 0) {
-      println("Running split-tree...")
-      EventSplitter.splitInTwo(config.mixRunLocation.get,
-        readEventsObj,
-        4,
-        config.sample,
-        annotationMapping)
-    } else {
-      println("Running single tree...")
-      val (rootNode, linker) = MixRunner.mixOutputToTree(
-        MixRunner.runMix(config.mixRunLocation.get,readEventsObj), readEventsObj, annotationMapping, "root")
-      // post-process the final tree
-      MixRunner.postProcessTree(rootNode, linker, readEventsObj, annotationMapping)
-    }
+    println("Running single tree...")
+    val (rootNode, linker) = MixRunner.mixOutputToTree(
+        MixRunner.runMix(config.mixRunLocation.get,readEventsObj, config.useCached), readEventsObj, annotationMapping, "root")
+        // post-process the final tree
+        MixRunner.postProcessTree(rootNode, linker, readEventsObj, annotationMapping)
+
 
     // ------------------------------------------------------------
     // If asked, add cells to the leaf nodes
@@ -99,8 +100,11 @@ object MixMain extends App {
       val childAnnot = new CellAnnotations(config.allCellAnnotations.get)
       RichNode.addCells(rootNode, childAnnot, "white")
       childAnnot.printUnmatchedCells()
-
+      println("Resetting child annotations after adding cell annotations...")
       rootNode.resetChildrenAnnotations()
+      RichNode.aggregateKeyword(rootNode,"cellBarcode",",")
+      //MixRunner.postProcessTree(rootNode, linker, readEventsObj, annotationMapping)
+
     }
 
     // ------------------------------------------------------------

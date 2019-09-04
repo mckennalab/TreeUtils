@@ -29,7 +29,7 @@ class MixParser(mixOutput: String, eventsToNumbers: EventContainer, treeToUse: I
   val headerLine = "From    To     Any Steps?    State at upper node"
 
   val inputFile = Source.fromFile(mixOutput).getLines().toArray
-  println(inputFile.mkString("\n"))
+  //println(inputFile.mkString("\n"))
   var inGenotypeSection = false
   var currentGenotype: Option[Edge] = None
   var currentTreeNumber = 0

@@ -277,7 +277,7 @@ object RichNode {
   }
 
   /**
-    * add children cell to the terminal leaf nodes
+    * add children cells to the terminal leaf nodes
     *
     * @param node               the RichNode to recurse on
     * @param childAnnot         the cell annotation object
@@ -295,7 +295,10 @@ object RichNode {
         newONode.setHeight(node.height + 1.0)
         val richN = RichNode(newONode,node.annotations,Some(node),node.numberOfTargets,addedColor)
         richN.parsimonyEvents = cell.eventString.split("-")
-        if (cell.clade >= 0) richN.freeAnnotations("clade") = cell.clade.toString
+        cell.additionalAnnotations.foreach{case(name, value) => {
+          richN.freeAnnotations(name) = value
+        }}
+        println("adding " + cellsToAdd.size + " cells")
         node.children :+= richN
       }}
     }
@@ -384,7 +387,7 @@ object RichNode {
         node.parsimonyEvents
       }
       case 2 => {
-        node.parsimonyEvents = RichNode.commonEvents(backAssignGenotypes(node.children(0)),backAssignGenotypes(node.children(1)))
+        node.parsimonyEvents = RichNode.commonEvents(node.children.map{child => backAssignGenotypes(child)})
         println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
         node.parsimonyEvents
       }
@@ -395,13 +398,18 @@ object RichNode {
   }
 
   /**
-    * find the common events in two arrays
-    * @param left
-    * @param right
+    * find the common events in a set of arrays
+    * @param events an array of arrays, which contain events over target regions
     * @return the common events
     */
-  def commonEvents(left: Array[String], right: Array[String]): Array[String] = {
-    left.zip(right).map{case(l,r) => if (l == r) l else "NONE"}.toArray
+  def commonEvents(events: Array[Array[String]]): Array[String] = {
+    assert(events.size > 0, "Events.size was less than one, please pass in at least one event")
+    var ret = events(0).map{tr => tr}
+    events.slice(1, events.size).foreach{evt =>
+      assert(evt.size == ret.size, "We saw an event set with a different number of events than the previous set")
+      evt.zipWithIndex.foreach{case(e,index) => if (!(ret(index) == e)) ret(index) = "NONE"}
+    }
+    ret
   }
 
   /**
@@ -474,6 +482,30 @@ object RichNode {
       }
     } else {
       node.children.map { case (nd) => recCheckNodeConsistency(nd) }.toSet.toList
+    }
+  }
+
+
+  /**
+    * aggregate a keyword set on leaves up to parents
+    * @param node the initial node
+    * @param keyword the keyword to lookup in the node's free annotations
+    * @param sep the string used to join annotations
+    * @param noAnnotation the string to use if a leaf doesn't have the annotation
+    * @return
+    */
+  def aggregateKeyword(node: RichNode, keyword: String, sep: String, noAnnotation: String = "NONE"): String = {
+    // if we have a leaf -- where there are no children -- assign the name
+    if (node.children.size == 0) {
+      if (node.freeAnnotations contains keyword)
+        node.freeAnnotations(keyword)
+      else
+        "NONE"
+    } else {
+
+      val aggreagatedKeyword = node.children.map { case (nd) => aggregateKeyword(nd,keyword,sep) }.toSet.toList.mkString(sep)
+      node.freeAnnotations(keyword) = aggreagatedKeyword
+      aggreagatedKeyword
     }
   }
 

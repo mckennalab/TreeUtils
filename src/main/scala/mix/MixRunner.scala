@@ -4,12 +4,16 @@ import java.io._
 
 import scala.collection.JavaConversions._
 import java.io.{File, FileInputStream, FileOutputStream}
-import java.nio.file.Files
 
 import beast.util.TreeParser
 import main.scala.annotation.AnnotationsManager
 import main.scala.node.{BestTree, NodeLinker, RichNode}
 
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
+
+import java.nio.channels.FileChannel
 
 /**
   * Control the mix program
@@ -37,7 +41,7 @@ object MixRunner {
     val stdin = process.getOutputStream()
     val writer = new BufferedWriter(new OutputStreamWriter(stdin))
 
-    val a = Array(mixPackage.mixIntputFile, "P", "W", "4", "5", "Y", mixPackage.weightsFile).foreach { s =>
+    val a = Array(mixPackage.mixInputAlleles, "P", "W", "4", "5", "Y", mixPackage.weightsFile).foreach { s =>
       writer.write((s + "\n"))
       writer.flush()
     }
@@ -59,12 +63,39 @@ object MixRunner {
     // copy the mix file
     val dest = new File(mixPackage.mixDirToRunIn + "/mix")
     println(dest.getAbsolutePath)
-    dest.createNewFile
-    new FileOutputStream(dest) getChannel() transferFrom(new FileInputStream(mixLocation) getChannel, 0, Long.MaxValue)
-    dest.setExecutable(true)
 
+
+    copyNioBuffered(mixLocation.getAbsolutePath,dest.getAbsolutePath)
+
+    dest.setExecutable(true)
     // run and assert that we didn't fail
     assert(lowLevelProcessesMix(mixPackage) == 0)
+  }
+
+  /**
+    * from http://squirrel.pl/blog/2012/06/05/io-vs-nio-interruptions-timeouts-and-buffers/
+    *
+    * We had some problems with Java NIO transfer functions not fully completing
+    * before returning. I copied this function, which closes the file before returning
+    * to the calling function
+    *
+    * @param in the input file string
+    * @param out the output file string
+    */
+  @throws[Exception]
+  private def copyNioBuffered(in: String, out: String): Unit = {
+    val fin = new FileInputStream(in).getChannel
+    val fout = new FileOutputStream(out).getChannel
+    val buff = ByteBuffer.allocate(4096)
+    while ( {
+      fin.read(buff) != -1 || buff.position > 0
+    }) {
+      buff.flip
+      fout.write(buff)
+      buff.compact
+    }
+    fin.close()
+    fout.close()
   }
 
   /**
@@ -74,20 +105,29 @@ object MixRunner {
     * @param readEventsObj the read events container
     * @return a MixFilePackage describing the results of the MIX run
     */
-  def runMix(runDir: File, readEventsObj: EventContainer): MixFilePackage = {
+  def runMix(runDir: File, readEventsObj: EventContainer, useCache: Boolean): MixFilePackage = {
     // setup the files we use when runnning MIX
     val mixInput = new File(runDir.getAbsolutePath + File.separator + "mixInput")
     val mixWeights = new File(runDir.getAbsolutePath + File.separator + "mixWeights")
 
     val mixPackage = MixFilePackage(mixInput, mixWeights, runDir)
 
-    println("Writing the mix data to disk, containing " + readEventsObj.events.size + " events")
-    EventIO.writeMixPackage(mixPackage, readEventsObj)
+    if (useCache) {
+      assert(mixPackage.mixTree.exists(),"Unable to find the cached output tree, check that file exists: " + mixPackage.mixTree.getAbsolutePath)
+      assert(mixPackage.mixFile.exists(),"Unable to find the cached output file, check that file exists: " + mixPackage.mixFile.getAbsolutePath)
 
-    // now run mix for the tree as a whole
-    println("Running mix...")
-    MixRunner.executeMix(mixPackage)
-    mixPackage
+      println("Using existing MIX run data...")
+      mixPackage
+
+    } else {
+      println("Writing the mix data to disk, containing " + readEventsObj.events.size + " events")
+      EventIO.writeMixPackage(mixPackage, readEventsObj)
+
+      // now run mix for the tree as a whole
+      println("Running mix...")
+      MixRunner.executeMix(mixPackage)
+      mixPackage
+    }
   }
 
   /**
@@ -122,8 +162,8 @@ object MixRunner {
     println("Delete mixfile: " + mixFilePackage.mixFile)
     println("Delete mixtree: " + mixFilePackage.mixTree)
 
-    Files.delete(mixFilePackage.mixFile.toPath)
-    Files.delete(mixFilePackage.mixTree.toPath)
+    //Files.delete(mixFilePackage.mixFile.toPath)
+    //Files.delete(mixFilePackage.mixTree.toPath)
 
     // return the rich node representation of this tree
     (RichNode(treeParser.getRoot, annotationMapping, None, readEventsObj.numberOfTargets, defaultColor), mixParser.activeTree)

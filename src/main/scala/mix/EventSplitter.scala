@@ -27,7 +27,8 @@ object EventSplitter {
                  firstXSites: Int,
                  sample: String,
                  annotationMapping: AnnotationsManager,
-                 graftedNodeColor: String = "red"): RichNode = {
+                 graftedNodeColor: String = "red",
+                 useCache: Boolean = false): RichNode = {
 
     // setup an array of wildcards over the sites we want to split on
     val sites = (0 until firstXSites).map {
@@ -40,7 +41,7 @@ object EventSplitter {
 
     // run the root tree, and fetch the results
     println("Processing the root tree with nodes " + rootTreeContainer._1.events.map{evt => evt.events.mkString("_")}.mkString(", "))
-    val (rootNodeAndConnection,linker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, rootTreeContainer._1), rootTreeContainer._1, annotationMapping, "root")
+    val (rootNodeAndConnection,linker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, rootTreeContainer._1, useCache), rootTreeContainer._1, annotationMapping, "root")
 
     // now for each subtree, make a tree using just those events to be grafted onto the root tree
     // and graft the children onto the appropriate node
@@ -54,7 +55,7 @@ object EventSplitter {
           val subset = EventContainer.subsetByChildren(eventContainer, children, internalNodeName)
 
           println("Processing the " + internalNodeName + " tree... " + rootTreeContainer._2(internalNodeName).mkString("^") + " with kids " + subset.events.map{evt => evt.prettyString()}.mkString("),("))
-          val (childNode, childLinker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, subset), subset, annotationMapping, internalNodeName, graftedNodeColor)
+          val (childNode, childLinker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, subset, useCache), subset, annotationMapping, internalNodeName, graftedNodeColor)
 
           childToTree(internalNodeName) = childNode
           childToTree(internalNodeName).graftedNode = true

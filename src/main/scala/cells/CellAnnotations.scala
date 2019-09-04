@@ -2,7 +2,6 @@ package main.scala.cells
 
 import java.io._
 
-import main.scala.node.RichNode
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -13,54 +12,61 @@ class CellAnnotations(cellFile: File) {
   // load up the annotation file
   val cells = Source.fromFile(cellFile).getLines()
 
-  // find the target events
-  val tokens = cells.next().split("\t").zipWithIndex.filter{case(tks,i) => tks contains "target"}.map{case(t,i) => (t.stripPrefix("target").toInt,i)}.toMap
-  val maxToken = tokens.keys.max
-
-
-  tokens.foreach{case(index,pos) => println(index + " i ---> p " + pos)}
-  println("Max token " + maxToken)
-
   // get the cells loaded up
   val cellBuffer = new ArrayBuffer[CellAnnotation]()
   println("loading annotations from " + cellFile.getAbsolutePath)
 
-  cells.foreach{cl => {
+  // change the format -- we assume column one is the cell ID, two is the event string, and the rest are free-form annotations
+  val headerString = cells.next().split("\t")
+
+  val cellID = headerString(0)
+  val hmid = headerString(1)
+  assert(cellID == "cellID","First column should be cellID, we saw " + headerString(0))
+  assert(hmid   == "hmid","Second column should be hmid, we saw " + headerString(1))
+  
+  cells.foreach { cl => {
     val sp = cl.split("\t")
-    if (sp(1) == "PASS" && sp.size >= maxToken) {
-      try {
-        val eventString = (0 until maxToken).map { e => sp(tokens(e + 1)) }.mkString("-")
-        cellBuffer += CellAnnotation(sp(0), eventString, sp(2).toInt)
-      } catch {
-        case e: Exception => {println("Failed on line " + sp.mkString("*")); throw e}
+    try {
+      val newCell = CellAnnotation(cellID, hmid)
+
+      headerString.slice(2,headerString.size).zipWithIndex.foreach{case(headerToken,index) =>
+        newCell.additionalAnnotations(headerToken) = sp(index)
       }
-    } else {
-      println("dropping cell " + sp(0))
+
+      cellBuffer += newCell
+    } catch {
+      case e: Exception => {
+        println("Failed on line " + sp.mkString("*")); throw e
+      }
     }
-  }}
+
+  }
+  }
 
   var allCells = cellBuffer.toArray
 
   /**
     * find cells that match the cell ID
+    *
     * @param eventString the event string to look up
     */
   def findMatchingCells(eventString: String): Array[CellAnnotation] = {
-    allCells.filter{cell => {
+    allCells.filter { cell => {
       if (cell.eventString == eventString) {
         if (cell.isMatchedToTerminalNode)
           println("Cell " + cell.name + " is already matched!!")
         cell.isMatchedToTerminalNode = true
         true
       } else false
-    }}
+    }
+    }
   }
 
   /**
     * print any cells we haven't matched yet
     */
   def printUnmatchedCells(): Unit = {
-    allCells.foreach{cell =>
+    allCells.foreach { cell =>
       if (!cell.isMatchedToTerminalNode)
         println("Cell " + cell.name + " with event string " + cell.eventString + " IS UNMATCHED!")
     }
@@ -68,6 +74,8 @@ class CellAnnotations(cellFile: File) {
 
 }
 
-case class CellAnnotation(name: String, eventString: String, clade: Int = -1) {
+case class CellAnnotation(name: String, eventString: String) {
   var isMatchedToTerminalNode = false
+
+  val additionalAnnotations = new mutable.HashMap[String,String]()
 }
