@@ -23,14 +23,14 @@ class CellAnnotations(cellFile: File) {
   val hmid = headerString(1)
   assert(cellID == "cellID","First column should be cellID, we saw " + headerString(0))
   assert(hmid   == "hmid","Second column should be hmid, we saw " + headerString(1))
-  
+
   cells.foreach { cl => {
     val sp = cl.split("\t")
     try {
-      val newCell = CellAnnotation(cellID, hmid)
+      val newCell = CellAnnotation(sp(0), sp(1))
 
       headerString.slice(2,headerString.size).zipWithIndex.foreach{case(headerToken,index) =>
-        newCell.additionalAnnotations(headerToken) = sp(index)
+        newCell.additionalAnnotations(headerToken) = sp(index + 2)
       }
 
       cellBuffer += newCell

@@ -7,7 +7,7 @@ import main.scala.cells.CellAnnotations
 import main.scala.mix.{EventContainer, MixParser}
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
+import scala.collection.{SortedMap, mutable}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -106,6 +106,18 @@ case class RichNode(originalNd: Node,
       cd.graftToName(name, nd)
     }.foldLeft(replacedHere)((a, b) => a | b)
 
+  }
+
+  /**
+    * Sort the children of this node using a hierarchy of annotations
+    *
+    * @param sortingAnnotations an array of annotations to sort on, in order (alphabetically)
+    */
+  def sortChildren(sortingAnnotations: Array[String]) {
+
+    children = RichNode.sortNodes(children,sortingAnnotations)
+
+    children.foreach(cd => cd.sortChildren(sortingAnnotations))
   }
 
   /**
@@ -253,6 +265,54 @@ object RichNode {
     "):1.0"
   }
 
+
+  /**
+    * Sort nodes based on alphabetical ordering of a series of annotations
+    * @param orderedAnnotations the annotations
+    */
+  def sortNodes(nodes: Array[RichNode], orderedAnnotations: Array[String]): Array[RichNode] = {
+    val lastAnnotationConstant = "__LAST__"
+
+    if (orderedAnnotations.size == 0)
+      return nodes
+
+    val firstAnnotation = orderedAnnotations(0)
+
+    val unAnnotatedBuilder = new ArrayBuffer[RichNode]()
+
+    // first discover the values of the annotations, and then store them in order
+    val sortedAnnotation = mutable.SortedMap[String,mutable.ArrayBuffer[RichNode]]()
+
+    nodes.foreach{case(node) => {
+      val annotationValue = node.freeAnnotations.getOrElse(firstAnnotation,lastAnnotationConstant)
+
+      if (annotationValue == lastAnnotationConstant) {
+        unAnnotatedBuilder += node
+      } else {
+        val builder = sortedAnnotation.getOrElse(annotationValue, new ArrayBuffer[RichNode]())
+
+        builder += node
+
+        sortedAnnotation(annotationValue) = builder
+      }
+    }}
+
+    // then sort sub populations, in order
+    val remainingAnnotations = orderedAnnotations.slice(1,orderedAnnotations.size)
+    val resorted = sortedAnnotation.map{case(value,nodes) => {
+      (value,sortNodes(nodes.toArray,remainingAnnotations))
+    }}
+    // and do the same for the nodes without an annotation
+    val resortedUnknown = sortNodes(unAnnotatedBuilder.toArray,remainingAnnotations)
+
+    // then flatten and return the sorted array
+    val finalSorted = new ArrayBuffer[RichNode]
+    resorted.foreach{case(annot,nodes) => nodes.foreach(node => finalSorted += node)}
+    resortedUnknown.foreach(node => finalSorted += node)
+    finalSorted.toArray
+  }
+
+
   /**
     *
     * @param node               the RichNode to recurse on
@@ -298,7 +358,7 @@ object RichNode {
         cell.additionalAnnotations.foreach{case(name, value) => {
           richN.freeAnnotations(name) = value
         }}
-        println("adding " + cellsToAdd.size + " cells")
+        //println("adding " + cellsToAdd.size + " cells")
         node.children :+= richN
       }}
     }
@@ -563,41 +623,45 @@ object RichNode {
     * @param node         the node to start at
     * @param parent       it's parent node, optional (for recussion)
     * @param distToRoot   the distance to the root node, as we convert to a zero or one system
+    * @param indentDepth  how many tabs we need
     * @param noParentName if we don't have a parent, what should we call the previous node
     * @return a JSON string representation
     */
-  def toJSONOutput(node: RichNode, parent: Option[RichNode], distToRoot: Double, noParentName: String = "null"): String = {
+  def toJSONOutput(node: RichNode, parent: Option[RichNode], distToRoot: Double, indentDepth: Int, noParentName: String = "null"): String = {
     val outputString = new ArrayBuffer[String]()
-    outputString += RichNode.toJSON("name", node.name)
-    outputString += RichNode.toJSON("parent", if (parent.isDefined) parent.get.name else noParentName)
-    outputString += RichNode.toJSON("length", 1)
-    outputString += RichNode.toJSON("rootDist", distToRoot)
-    outputString += RichNode.toJSON("cladeTotal", node.countSubNodes())
-    outputString += RichNode.toJSON("totatSubNodes", node.countSubProportions())
-    outputString += RichNode.toJSON("color", node.color)
-    outputString += RichNode.toJSON("nodecolor", node.nodeColor)
-    outputString += RichNode.toJSON("grafted", node.graftedNode.toString)
 
-    outputString += RichNode.toJSON("sample", node.sampleName)
+    val indent = "\t" * indentDepth
+
+    outputString += indent + RichNode.toJSON("name", node.name)
+    outputString += indent + RichNode.toJSON("parent", if (parent.isDefined) parent.get.name else noParentName)
+    outputString += indent + RichNode.toJSON("length", 1)
+    outputString += indent + RichNode.toJSON("rootDist", distToRoot)
+    outputString += indent + RichNode.toJSON("cladeTotal", node.countSubNodes())
+    outputString += indent + RichNode.toJSON("totatSubNodes", node.countSubProportions())
+    outputString += indent + RichNode.toJSON("color", node.color)
+    outputString += indent + RichNode.toJSON("nodecolor", node.nodeColor)
+    outputString += indent + RichNode.toJSON("grafted", node.graftedNode.toString)
+
+    outputString += indent + RichNode.toJSON("sample", node.sampleName)
     node.freeAnnotations.foreach { case (key, value) =>
-      outputString += RichNode.toJSON(key, value)
+      outputString += indent + RichNode.toJSON(key, value)
     }
     // TODO: fix this proportions stuff
     val sampleTot = if (node.annotations.sampleTotals contains node.sampleName) node.annotations.sampleTotals(node.sampleName) else 0
-    outputString += RichNode.toJSON("organCountsMax", sampleTot)
-    outputString += RichNode.toJSON("cladeTotal", node.count)
-    outputString += RichNode.toJSON("max_organ_prop", if (sampleTot.toDouble > 0) node.count.toDouble / sampleTot.toDouble else 0.0)
-    outputString += RichNode.toJSON("event", node.parsimonyEvents.mkString(node.annotations.eventSeperator))
-    outputString += RichNode.toJSON("commonEvent", node.sharedEdits.mkString(node.annotations.eventSeperator))
-    outputString += "\"organProportions\": { \n"
-    outputString += node.sampleProportions.map { case (sample, prop) => RichNode.toJSON(sample, prop, terminator = "") }.mkString(",\n")
+    outputString += indent + RichNode.toJSON("organCountsMax", sampleTot)
+    outputString += indent + RichNode.toJSON("cladeTotal", node.count)
+    outputString += indent + RichNode.toJSON("max_organ_prop", if (sampleTot.toDouble > 0) node.count.toDouble / sampleTot.toDouble else 0.0)
+    outputString += indent + RichNode.toJSON("event", node.parsimonyEvents.mkString(node.annotations.eventSeperator))
+    outputString += indent + RichNode.toJSON("commonEvent", node.sharedEdits.mkString(node.annotations.eventSeperator))
+    outputString += indent + "\"organProportions\": { \n"
+    outputString += node.sampleProportions.map { case (sample, prop) => indent + RichNode.toJSON(sample, prop, terminator = "") }.mkString(",\n")
     outputString += "\n},\n"
     if (node.children.size > 0) {
-      outputString += "\"children\": [{\n"
-      outputString += node.children.map { child => RichNode.toJSONOutput(child, Some(node), distToRoot + 1.0) }.mkString("},\n{\n")
-      outputString += "}],\n"
+      outputString += indent + "\"children\": [{\n"
+      outputString += node.children.map { child => RichNode.toJSONOutput(child, Some(node), distToRoot + 1.0, indentDepth + 1) }.mkString("},\n{\n")
+      outputString += indent + "}],\n"
     }
-    outputString += RichNode.toJSON("consistency", node.getConsistency, terminator = "\n")
+    outputString += indent + RichNode.toJSON("consistency", node.getConsistency, terminator = "\n")
     outputString.toArray.mkString("")
   }
 

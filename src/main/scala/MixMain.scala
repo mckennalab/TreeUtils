@@ -6,6 +6,7 @@ import main.scala.annotation.AnnotationsManager
 import main.scala.cells.CellAnnotations
 import main.scala.mix._
 import main.scala.node.{BestTree, RichNode}
+import picocli.CommandLine
 
 
 /**
@@ -40,6 +41,7 @@ case class MixConfig(allEventsFile: Option[File] = None,
                      mixRunLocation: Option[File] = None,
                      mixLocation: Option[File] = None,
                      allCellAnnotations: Option[File] = None,
+                     sortByAnnotations: Option[String] = None,
                      sample: String = "UNKNOWN",
                      useCached: Boolean = false,
                      firstX: Int = -1)
@@ -54,14 +56,15 @@ object MixMain extends App {
     head("MixToTree", "1.3")
 
     // *********************************** Inputs *******************************************************
-    opt[File]("allEventsFile")  required()  valueName ("<file>") action { (x, c) => c.copy(allEventsFile = Some(x)) } text ("the input file containing information about the CRISPR events over the target sequences")
-    opt[File]("mixRunLocation") required()  valueName ("<file>") action { (x, c) => c.copy(mixRunLocation = Some(x)) } text ("what directory should we run MIX in ")
-    opt[File]("outputTree")     required()  valueName ("<file>") action { (x, c) => c.copy(outputTree = Some(x)) } text ("the output tree we'll produce")
-    opt[String]("sample")       required()  valueName ("<file>") action { (x, c) => c.copy(sample = x) } text ("the sample name")
-    opt[File]("mixEXEC")        required()  valueName ("<file>") action { (x, c) => c.copy(mixLocation = Some(x)) } text ("where to find the MIX executable")
-    opt[Int]("subsetFirstX")                valueName ("<int>")  action { (x, c) => c.copy(firstX = x) } text ("Use the first X targets to build the tree, then use the remaining targets to build sub-trees")
-    opt[Unit]("useCached")                  valueName ("<file>") action { (x, c) => c.copy(useCached = true) } text ("should we used a cached (previous) MIX run in the specified directory")
-    opt[File]("annotations")                valueName ("<file>") action { (x, c) => c.copy(allCellAnnotations = Some(x)) } text ("the annotation file for individual cells")
+    opt[File]("allEventsFile")  required()  valueName ("<file>")   action { (x, c) => c.copy(allEventsFile = Some(x)) } text ("the input file containing information about the CRISPR events over the target sequences")
+    opt[File]("mixRunLocation") required()  valueName ("<file>")   action { (x, c) => c.copy(mixRunLocation = Some(x)) } text ("what directory should we run MIX in ")
+    opt[File]("outputTree")     required()  valueName ("<file>")   action { (x, c) => c.copy(outputTree = Some(x)) } text ("the output tree we'll produce")
+    opt[String]("sample")       required()  valueName ("<String>") action { (x, c) => c.copy(sample = x) } text ("the sample name")
+    opt[File]("mixEXEC")        required()  valueName ("<file>")   action { (x, c) => c.copy(mixLocation = Some(x)) } text ("where to find the MIX executable")
+    opt[Int]("subsetFirstX")                valueName ("<int>")    action { (x, c) => c.copy(firstX = x) } text ("Use the first X targets to build the tree, then use the remaining targets to build sub-trees")
+    opt[Unit]("useCached")                  valueName ("<file>")   action { (x, c) => c.copy(useCached = true) } text ("should we used a cached (previous) MIX run in the specified directory")
+    opt[File]("annotations")                valueName ("<file>")   action { (x, c) => c.copy(allCellAnnotations = Some(x)) } text ("the annotation file for individual cells")
+    opt[String]("sortByAnnotations")        valueName ("<String>") action { (x, c) => c.copy(sortByAnnotations = Some(x)) } text ("the annotation file for individual cells")
 
     // some general command-line setup stuff
     note("process a GESTALT input file into a JSON tree file using PHYLIP MIX\n")
@@ -107,6 +110,12 @@ object MixMain extends App {
 
     }
 
+    // sort the order of children node according to an annotation
+    if (config.sortByAnnotations.isDefined) {
+      val splitAnnotations = config.sortByAnnotations.get.split(",")
+      rootNode.sortChildren(splitAnnotations)
+    }
+
     // ------------------------------------------------------------
     // traverse the nodes and add names to any internal nodes without names
     // ------------------------------------------------------------
@@ -117,7 +126,7 @@ object MixMain extends App {
     // now output the adjusted tree
     val output = new PrintWriter(config.outputTree.get.getAbsolutePath)
     output.write("[{\n")
-    output.write(RichNode.toJSONOutput(rootNode, None,1.0))
+    output.write(RichNode.toJSONOutput(rootNode, None,1.0, 0))
     output.write("}]\n")
     output.close()
 
