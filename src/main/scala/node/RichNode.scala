@@ -265,13 +265,19 @@ object RichNode {
     "):1.0"
   }
 
+  def toDouble(s: String): Option[Double] = {
+    try {
+      Some(s.toDouble)
+    } catch {
+      case e: Exception => None
+    }
+  }
 
   /**
     * Sort nodes based on alphabetical ordering of a series of annotations
     * @param orderedAnnotations the annotations
     */
   def sortNodes(nodes: Array[RichNode], orderedAnnotations: Array[String]): Array[RichNode] = {
-    val lastAnnotationConstant = "__LAST__"
 
     if (orderedAnnotations.size == 0)
       return nodes
@@ -280,11 +286,96 @@ object RichNode {
 
     val unAnnotatedBuilder = new ArrayBuffer[RichNode]()
 
-    // first discover the values of the annotations, and then store them in order
-    val sortedAnnotation = mutable.SortedMap[String,mutable.ArrayBuffer[RichNode]]()
+    if (testDoubleConversation(nodes,firstAnnotation)) {
+      println("SORTING DOUBLE " + firstAnnotation)
+      sortNodesDoubleValue(nodes, orderedAnnotations, unAnnotatedBuilder)
+    } else {
+      println("SORTING String " + firstAnnotation)
+      sortNodesStringValue(nodes, orderedAnnotations, unAnnotatedBuilder)
+    }
+  }
 
-    nodes.foreach{case(node) => {
-      val annotationValue = node.freeAnnotations.getOrElse(firstAnnotation,lastAnnotationConstant)
+  /**
+    * test if this annotation can be converted to a number
+    * @param nodes our list of nodes
+    * @param annotation the annotation to test for conversion
+    * @return true if all values can convert to a number (or is empty)
+    */
+  def testDoubleConversation(nodes: Array[RichNode], annotation: String): Boolean = {
+    var isNumber = true
+    nodes.foreach{nd => if ((nd.freeAnnotations contains annotation)) isNumber = isNumber & toDouble(nd.freeAnnotations(annotation)).isDefined}
+    isNumber
+  }
+
+  /**
+    * sort nodes based on a numberic value
+    * @param nodes the nodes we want to sort
+    * @param orderedAnnotations the list of annotations
+    * @param unAnnotatedBuilder
+    * @return
+    */
+  private def sortNodesDoubleValue(nodes: Array[RichNode],
+                                   orderedAnnotations: Array[String],
+                                   unAnnotatedBuilder: ArrayBuffer[RichNode]): Array[RichNode] = {
+
+    val lastAnnotationConstant = "1000000000"
+    val firstAnnotation = orderedAnnotations(0)
+
+    // first discover the values of the annotations, and then store them in order
+    val sortedAnnotation = mutable.SortedMap[Double, ArrayBuffer[RichNode]]()
+
+    nodes.foreach { case (node) => {
+      val annotationValue = toDouble(node.freeAnnotations.getOrElse(firstAnnotation, lastAnnotationConstant)).get
+      println(annotationValue + " from " + node.freeAnnotations.getOrElse(firstAnnotation, lastAnnotationConstant))
+      if (annotationValue == lastAnnotationConstant) {
+        unAnnotatedBuilder += node
+      } else {
+        val builder = sortedAnnotation.getOrElse(annotationValue, new ArrayBuffer[RichNode]())
+
+        builder += node
+
+        sortedAnnotation(annotationValue) = builder
+      }
+    }
+    }
+
+    // then sort sub populations, in order
+    val remainingAnnotations = orderedAnnotations.slice(1, orderedAnnotations.size)
+    val resorted = sortedAnnotation.map { case (value, nodes) => {
+      (value, sortNodes(nodes.toArray, remainingAnnotations))
+    }
+    }
+
+    // and do the same for the nodes without an annotation
+    val resortedUnknown = sortNodes(unAnnotatedBuilder.toArray, remainingAnnotations)
+
+    // then flatten and return the sorted array
+    val finalSorted = new ArrayBuffer[RichNode]
+    resorted.foreach { case (annot, nodes) => nodes.foreach(node => finalSorted += node) }
+    resortedUnknown.foreach(node => finalSorted += node)
+    finalSorted.toArray
+  }
+
+
+  /**
+    * sort nodes based on a string value
+    * @param nodes
+    * @param orderedAnnotations
+    * @param unAnnotatedBuilder
+    * @return
+    */
+  private def sortNodesStringValue(nodes: Array[RichNode],
+                                   orderedAnnotations: Array[String],
+                                   unAnnotatedBuilder: ArrayBuffer[RichNode]): Array[RichNode] = {
+
+    val lastAnnotationConstant:String = "__LAST__"
+    val firstAnnotation = orderedAnnotations(0)
+
+    // first discover the values of the annotations, and then store them in order
+    val sortedAnnotation = mutable.SortedMap[String, ArrayBuffer[RichNode]]()
+
+    nodes.foreach { case (node) => {
+      val annotationValue = node.freeAnnotations.getOrElse(firstAnnotation, lastAnnotationConstant)
 
       if (annotationValue == lastAnnotationConstant) {
         unAnnotatedBuilder += node
@@ -295,23 +386,25 @@ object RichNode {
 
         sortedAnnotation(annotationValue) = builder
       }
-    }}
+    }
+    }
 
     // then sort sub populations, in order
-    val remainingAnnotations = orderedAnnotations.slice(1,orderedAnnotations.size)
-    val resorted = sortedAnnotation.map{case(value,nodes) => {
-      (value,sortNodes(nodes.toArray,remainingAnnotations))
-    }}
+    val remainingAnnotations = orderedAnnotations.slice(1, orderedAnnotations.size)
+    val resorted = sortedAnnotation.map { case (value, nodes) => {
+      (value, sortNodes(nodes.toArray, remainingAnnotations))
+    }
+    }
+
     // and do the same for the nodes without an annotation
-    val resortedUnknown = sortNodes(unAnnotatedBuilder.toArray,remainingAnnotations)
+    val resortedUnknown = sortNodes(unAnnotatedBuilder.toArray, remainingAnnotations)
 
     // then flatten and return the sorted array
     val finalSorted = new ArrayBuffer[RichNode]
-    resorted.foreach{case(annot,nodes) => nodes.foreach(node => finalSorted += node)}
+    resorted.foreach { case (annot, nodes) => nodes.foreach(node => finalSorted += node) }
     resortedUnknown.foreach(node => finalSorted += node)
     finalSorted.toArray
   }
-
 
   /**
     *
