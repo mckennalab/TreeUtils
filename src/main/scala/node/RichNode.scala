@@ -195,7 +195,7 @@ case class RichNode(originalNd: Node,
   }
 
   // some recursive counting functions
-  def countSubNodes(): Int = 1 + children.map { chd => chd.countSubNodes() }.sum
+  def countSubNodes(): Int = 1 + children.size + children.map { chd => chd.countSubNodes() }.sum
 
   def countSubUMIs(): Int = {
     val myCount = if (myAnnotations.isDefined) myAnnotations.get.count else 0
