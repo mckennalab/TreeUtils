@@ -729,7 +729,7 @@ object RichNode {
     outputString += indent + RichNode.toJSON("parent", if (parent.isDefined) parent.get.name else noParentName)
     outputString += indent + RichNode.toJSON("length", 1)
     outputString += indent + RichNode.toJSON("rootDist", distToRoot)
-    outputString += indent + RichNode.toJSON("cladeTotal", node.countSubNodes())
+    outputString += indent + RichNode.toJSON("subNodes", node.countSubNodes())
     outputString += indent + RichNode.toJSON("totatSubNodes", node.countSubProportions())
     outputString += indent + RichNode.toJSON("color", node.color)
     outputString += indent + RichNode.toJSON("nodecolor", node.nodeColor)
