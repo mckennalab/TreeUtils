@@ -1,7 +1,7 @@
 
 name := "TreeUtils"
 
-version := "1.3"
+version := "1.4"
 
 scalaVersion := "2.12.1"
 
@@ -12,8 +12,6 @@ libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.8" % "test"
 libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.8"
 
 libraryDependencies += "com.google.code.gson" % "gson" % "2.6.2"
-
-libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.0"
 
 libraryDependencies += "info.picocli" % "picocli" % "3.8.1"
 
