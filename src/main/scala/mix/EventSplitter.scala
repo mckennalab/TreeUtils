@@ -4,6 +4,7 @@ import java.io.File
 
 import beast.evolution.tree.Node
 import main.scala.annotation.AnnotationsManager
+import main.scala.mix.MixRunner.CacheApproach
 import main.scala.node.RichNode
 import main.scala.stats.Barcode
 
@@ -13,11 +14,6 @@ import scala.collection.mutable.HashMap
   * split events into a pre and post pile, generate trees seperately for each, and
   * put the whole tree back together
   *
-  * @param mixDir            the data directory
-  * @param eventContainer    a container of events
-  * @param firstXSites       the number of sites in the first half of the experiment
-  * @param sample            the sample name
-  * @param annotationMapping a mapping of nodes to their annotations
   */
 object EventSplitter {
 
@@ -41,7 +37,7 @@ object EventSplitter {
 
     // run the root tree, and fetch the results
     println("Processing the root tree with nodes " + rootTreeContainer._1.events.map{evt => evt.events.mkString("_")}.mkString(", "))
-    val (rootNodeAndConnection,linker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, rootTreeContainer._1, useCache), rootTreeContainer._1, annotationMapping, "root")
+    val (rootNodeAndConnection,linker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, rootTreeContainer._1, CacheApproach.NO_OVERWRITE), rootTreeContainer._1, annotationMapping, "root")
 
     // now for each subtree, make a tree using just those events to be grafted onto the root tree
     // and graft the children onto the appropriate node
@@ -55,7 +51,7 @@ object EventSplitter {
           val subset = EventContainer.subsetByChildren(eventContainer, children, internalNodeName)
 
           println("Processing the " + internalNodeName + " tree... " + rootTreeContainer._2(internalNodeName).mkString("^") + " with kids " + subset.events.map{evt => evt.prettyString()}.mkString("),("))
-          val (childNode, childLinker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, subset, useCache), subset, annotationMapping, internalNodeName, graftedNodeColor)
+          val (childNode, childLinker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, subset, CacheApproach.OVERWRITE), subset, annotationMapping, internalNodeName, graftedNodeColor)
 
           childToTree(internalNodeName) = childNode
           childToTree(internalNodeName).graftedNode = true
@@ -70,7 +66,7 @@ object EventSplitter {
           assert(childenEvents.size < 3 && childenEvents.size > 0)
 
           val parentEvent = rootNodeAndConnection.findSubnode(internalNodeName)
-          assert(parentEvent.isDefined)
+          assert(parentEvent.isDefined, "unable to find parent for " + internalNodeName)
 
           childenEvents.foreach{child => {
             linker.addEdge(Edge(parentEvent.get.name, child.name, parentEvent.get.name))

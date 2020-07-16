@@ -758,6 +758,61 @@ object RichNode {
     outputString.toArray.mkString("")
   }
 
+  /**
+    * generate a flat table version of our results
+    *
+    * @param node         the node to start at
+    * @param parent       it's parent node, optional (for recussion)
+    * @param distToRoot   the distance to the root node, as we convert to a zero or one system
+    * @param indentDepth  how many tabs we need
+    * @param noParentName if we don't have a parent, what should we call the previous node
+    * @return a JSON string representation
+    */
+  def toFlatTableOutput(node: RichNode, parent: Option[RichNode], distToRoot: Double, indentDepth: Int, noParentName: String = "null"): String = {
+    val outputString = new ArrayBuffer[String]()
+
+    outputString += RichNode.toKeyValue(node.name, "name", "name", node.name)
+    outputString += RichNode.toKeyValue(node.name, "parent", "parent", if (parent.isDefined) parent.get.name else noParentName)
+    outputString += RichNode.toKeyValue(node.name, "length", "length", 1)
+    outputString += RichNode.toKeyValue(node.name, "rootDist", "rootDist", distToRoot)
+    outputString += RichNode.toKeyValue(node.name, "subNodes", "subNodes", node.countSubNodes())
+    outputString += RichNode.toKeyValue(node.name, "totatSubNodes", "totatSubNodes", node.countSubProportions())
+    outputString += RichNode.toKeyValue(node.name, "color", "color", node.color)
+    outputString += RichNode.toKeyValue(node.name, "nodecolor", "nodecolor", node.nodeColor)
+    outputString += RichNode.toKeyValue(node.name, "grafted", "grafted", node.graftedNode.toString)
+
+    outputString += RichNode.toKeyValue(node.name, "sample", "sample", node.sampleName)
+    node.freeAnnotations.foreach { case (key, value) =>
+      outputString += RichNode.toKeyValue(node.name, key, key, value)
+    }
+
+    val sampleTot = if (node.annotations.sampleTotals contains node.sampleName) node.annotations.sampleTotals(node.sampleName) else 0
+    outputString += RichNode.toKeyValue(node.name, "organCountsMax", "organCountsMax", sampleTot)
+    outputString += RichNode.toKeyValue(node.name, "cladeTotal", "cladeTotal", node.count)
+    outputString += RichNode.toKeyValue(node.name, "max_organ_prop", "max_organ_prop", if (sampleTot.toDouble > 0) node.count.toDouble / sampleTot.toDouble else 0.0)
+    outputString += RichNode.toKeyValue(node.name, "event", "event", node.parsimonyEvents.mkString(node.annotations.eventSeperator))
+    outputString += RichNode.toKeyValue(node.name, "commonEvent", "commonEvent", node.sharedEdits.mkString(node.annotations.eventSeperator))
+    outputString += node.sampleProportions.map { case (sample, prop) => RichNode.toKeyValue(node.name, "organProportions", sample, prop) }.mkString("")
+    outputString += RichNode.toKeyValue(node.name, "consistency", "consistency", node.getConsistency)
+    if (node.children.size > 0) {
+      outputString += node.children.map { child => RichNode.toFlatTableOutput(child, Some(node), distToRoot + 1.0, indentDepth + 1) }.mkString("")
+    }
+    outputString.toArray.mkString("")
+  }
+
+  /**
+    * output 4-part key-value pairs
+    *
+    * @param sample
+    * @param name
+    * @param index
+    * @param value
+    * @param terminator
+    * @return
+    */
+  def toKeyValue(sample: String, name: String, index: String, value: Any, sep: String = "\t", terminator: String = "\n"): String = {
+    return (sample + sep + name + sep + index + sep + value.toString + terminator)
+  }
 
   def toJSON(name: String, simple: Any, terminator: String = ",\n"): String = simple match {
     case x: String => "\"" + name + "\" : \"" + x + "\"" + terminator

@@ -8,12 +8,12 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import beast.util.TreeParser
 import main.scala.annotation.AnnotationsManager
 import main.scala.node.{BestTree, NodeLinker, RichNode}
-
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
-
 import java.nio.channels.FileChannel
+
+import main.scala.mix.MixRunner.CacheApproach
 
 /**
   * Control the mix program
@@ -65,7 +65,7 @@ object MixRunner {
     println(dest.getAbsolutePath)
 
 
-    copyNioBuffered(mixLocation.getAbsolutePath,dest.getAbsolutePath)
+    copyNioBuffered(mixLocation.getAbsolutePath, dest.getAbsolutePath)
 
     dest.setExecutable(true)
     // run and assert that we didn't fail
@@ -79,7 +79,7 @@ object MixRunner {
     * before returning. I copied this function, which closes the file before returning
     * to the calling function
     *
-    * @param in the input file string
+    * @param in  the input file string
     * @param out the output file string
     */
   @throws[Exception]
@@ -98,6 +98,13 @@ object MixRunner {
     fout.close()
   }
 
+  object CacheApproach extends Enumeration {
+    type CacheApproach = Value
+    val NO_OVERWRITE, USE_CACHE, OVERWRITE = Value
+  }
+
+  import CacheApproach._
+
   /**
     * run MIX on a subset of the tree
     *
@@ -105,29 +112,46 @@ object MixRunner {
     * @param readEventsObj the read events container
     * @return a MixFilePackage describing the results of the MIX run
     */
-  def runMix(runDir: File, readEventsObj: EventContainer, useCache: Boolean): MixFilePackage = {
+  def runMix(runDir: File, readEventsObj: EventContainer, cacheApproach: CacheApproach): MixFilePackage = {
     // setup the files we use when runnning MIX
     val mixInput = new File(runDir.getAbsolutePath + File.separator + "mixInput")
     val mixWeights = new File(runDir.getAbsolutePath + File.separator + "mixWeights")
+    val mixOutput = new File(runDir.getAbsolutePath + File.separator + "outfile")
+    val mixTree = new File(runDir.getAbsolutePath + File.separator + "outtree")
 
     val mixPackage = MixFilePackage(mixInput, mixWeights, runDir)
 
-    if (useCache) {
-      assert(mixPackage.mixTree.exists(),"Unable to find the cached output tree, check that file exists: " + mixPackage.mixTree.getAbsolutePath)
-      assert(mixPackage.mixFile.exists(),"Unable to find the cached output file, check that file exists: " + mixPackage.mixFile.getAbsolutePath)
+    cacheApproach match {
+      case OVERWRITE => {
+        mixInput.delete()
+        mixWeights.delete()
+        mixOutput.delete()
+        mixTree.delete()
+        println("Writing the mix data to disk, containing " + readEventsObj.events.size + " events")
+        EventIO.writeMixPackage(mixPackage, readEventsObj)
 
-      println("Using existing MIX run data...")
-      mixPackage
+        // now run mix for the tree as a whole
+        println("Running mix...")
+        MixRunner.executeMix(mixPackage)
+      }
+      case USE_CACHE => {
+        assert(mixPackage.mixTree.exists(), "Unable to find the cached output tree, check that file exists: " + mixPackage.mixTree.getAbsolutePath)
+        assert(mixPackage.mixFile.exists(), "Unable to find the cached output file, check that file exists: " + mixPackage.mixFile.getAbsolutePath)
+      }
+      case NO_OVERWRITE => {
+        assert(!mixPackage.mixTree.exists(), "Unable to overwrite cached output tree, delete file: " + mixPackage.mixTree.getAbsolutePath)
+        assert(!mixPackage.mixFile.exists(), "Unable to overwrite cached output file, delete file: " + mixPackage.mixFile.getAbsolutePath)
+        assert(!mixOutput.exists(), "Unable to overwrite cached output tree, delete file: " + mixOutput.getAbsolutePath)
+        assert(!mixTree.exists(), "Unable to overwrite cached output file, delete file: " + mixTree.getAbsolutePath)
+        println("Writing the mix data to disk, containing " + readEventsObj.events.size + " events")
+        EventIO.writeMixPackage(mixPackage, readEventsObj)
 
-    } else {
-      println("Writing the mix data to disk, containing " + readEventsObj.events.size + " events")
-      EventIO.writeMixPackage(mixPackage, readEventsObj)
-
-      // now run mix for the tree as a whole
-      println("Running mix...")
-      MixRunner.executeMix(mixPackage)
-      mixPackage
+        // now run mix for the tree as a whole
+        println("Running mix...")
+        MixRunner.executeMix(mixPackage)
+      }
     }
+      mixPackage
   }
 
   /**

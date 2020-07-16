@@ -16,9 +16,10 @@ case class Barcode(events: Array[String], count: Int, proportion: Double, sample
     * @param index
     * @return
     */
-  def toMixString(): Tuple2[String,Boolean] = {
+  def toMixString(): Tuple3[String,Boolean,Int] = {
     var isWT = true
-    val ret = mixName + (1 until EventInformation.numberOfColumns()).map{ ind => {
+
+    val mixEncoding = (1 until EventInformation.numberOfColumns()).map{ ind => {
 
       // here we need to check if we have an UNKNOWN or CONFLICT in the positions that this event occupies
       val eventObj = EventInformation.columnToEvent(ind)
@@ -35,7 +36,10 @@ case class Barcode(events: Array[String], count: Int, proportion: Double, sample
         }
       }
     }}.mkString("")
-    return (ret,isWT)
+
+    val ret = mixName + mixEncoding
+
+    return (ret,isWT, mixEncoding.size)
   }
 
   def prettyString(): String = {

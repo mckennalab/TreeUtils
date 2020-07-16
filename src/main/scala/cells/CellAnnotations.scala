@@ -21,7 +21,7 @@ class CellAnnotations(cellFile: File) {
 
   val cellID = headerString(0)
   val hmid = headerString(1)
-  assert(cellID == "cellID","First column should be cellID, we saw " + headerString(0))
+  assert(cellID == "cellID" || cellID == "index","First column should be cellID or index, we saw " + headerString(0))
   assert(hmid   == "hmid","Second column should be hmid, we saw " + headerString(1))
 
   cells.foreach { cl => {

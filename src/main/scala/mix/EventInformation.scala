@@ -6,17 +6,12 @@ import scala.collection.immutable.Set
 /**
   * The class encodes the relationship between an event string and it's column number
   *
-  * @param eventString the string we're encoding
-  * @param columnNumber the column we're assigning for this event in the MIX output
   */
-case class EventInformation(eventString: String, columnNumber: Int, positions: Set[Int]) {
-
-  // the number of times we've seen this event
-  private[this] var _count: Int = 1
-  def count: Int = _count
-  def count_=(value: Int): Unit = {
-    _count = value
-  }
+class EventInformation(eventStr: String, colNumber: Int, pos: Set[Int]) {
+  val eventString = eventStr
+  val columnNumber = colNumber
+  var positions = pos
+  var count = 1
 }
 
 /**
@@ -35,7 +30,7 @@ object EventInformation {
   var specialEncodings = Map("NONE" -> 0, "CONFLICT" -> -1, "UNKNOWN" -> -2)
 
   specialEncodings.foreach{case(event, index) => {
-    eventToEncoding(event) = EventInformation(event, index, Set[Int]())
+    eventToEncoding(event) = new EventInformation(event, index, Set[Int]())
   }}
 
   def event(event: String): EventInformation = eventToEncoding(event)
@@ -58,10 +53,11 @@ object EventInformation {
       // make sure we have this position recorded, events can have multiple positions
       eventToPositions(eventString) = eventToPositions.getOrElse(eventString, Set[Int]()) ++ positions
       eventToEncoding(eventString).count = eventToEncoding(eventString).count + count
+      eventToEncoding(eventString).positions = eventToEncoding(eventString).positions ++ positions
       eventToEncoding(eventString)
 
     } else {
-      val ret = EventInformation(eventString, currentColumn, positions)
+      val ret = new EventInformation(eventString, currentColumn, positions)
       ret.count = count
       orderedEvents :+= ret
 

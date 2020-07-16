@@ -57,9 +57,6 @@ object EventIO {
 
   /**
     * convert text input into nodes
-    * @param allEventsFile a file with the event string first, followed by the count and proportions
-    * @param sample the sample name to use
-    * @return an array of events
     */
   def readCellObject(allCellsFile: File, sample: String): EventContainer = {
 
@@ -148,19 +145,28 @@ object EventIO {
 
     var outputBuffer = Array[String]()
 
-    var writtenAWT = false
+    var written_a_wild_type_allele = false
+    var eventStringSize = -1
     eventsContainer.events.foreach { evt => {
       val outputStr = evt.toMixString()
+      if (eventStringSize > 0)
+        assert(eventStringSize == outputStr._3)
+      else
+        eventStringSize = outputStr._3
+
       if (!outputStr._2) {
         outputBuffer :+= outputStr._1
-      } else if (!writtenAWT && outputStr._2) {
-        writtenAWT = true
+      } else if (!written_a_wild_type_allele && outputStr._2) {
+        written_a_wild_type_allele = true
+        println("WARNING: FIRST wildtype " + outputStr._1)
         outputBuffer :+= outputStr._1
+      } else {
+        println("WARNING: not writing allele " + outputStr._1)
       }
     }
     }
 
-    mixInputFile.write((outputBuffer.size) + "\t" + (eventsContainer.allEvents.size - 2) + "\n")
+    mixInputFile.write((outputBuffer.size) + "\t" + (eventStringSize) + "\n")
     outputBuffer.foreach { case (str) => {
       mixInputFile.write(str + "\n")
     }
