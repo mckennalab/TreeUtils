@@ -27,10 +27,12 @@ object ParsimonyCollapser {
           // reconnect all the children-of-the-child nodes
           child.children.foreach(chd => newChildren :+= chd)
           stillRefining = true
-          if (child.graftedNode)
+          if (child.graftedNode) {
             node.nodeColor = "green"
-          else
+            node.graftedNode = true // inherit this upwards
+          } else {
             node.nodeColor = "yellow"
+          }
         } else {
           newChildren :+= child
         }
