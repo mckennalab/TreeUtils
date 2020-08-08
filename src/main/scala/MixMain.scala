@@ -92,8 +92,8 @@ class MixMain extends Runnable with LazyLogging {
   private var firstX = -1
 
   @CommandLine.Option(names = Array("-sortByAnnotations", "--sortByAnnotations"), required = false, paramLabel = "FILE",
-    description = Array("the annotation file for individual cells"))
-  private var sortByAnnotations: Option[String] = None
+    description = Array("a list of annotations to sort cells by"))
+  private var sortByAnnotations: String = ""
 
   def run() {
     // set the MIX run location
@@ -149,8 +149,8 @@ class MixMain extends Runnable with LazyLogging {
     }
 
     // sort the order of children node according to an annotation
-    if (sortByAnnotations.isDefined) {
-      val splitAnnotations = sortByAnnotations.get.split(",")
+    if (sortByAnnotations != "") {
+      val splitAnnotations = sortByAnnotations.split(",")
       rootNode.sortChildren(splitAnnotations)
     }
 
