@@ -251,6 +251,27 @@ object RichNode {
     }
   }
 
+
+  /**
+    * we want to propagate the DNA/RNA counts
+    *
+    * @param node the RichNode to recurse on
+    */
+  def fixDNASource(node: RichNode): Tuple2[Int,Int] = {
+    var rna_total = node.freeAnnotations.getOrElse("rna_count","0").toInt
+    var dna_total = node.freeAnnotations.getOrElse("dna_count","0").toInt
+    node.children.foreach { child =>
+      val sub_totals = fixDNASource(child)
+      rna_total += sub_totals._1
+      dna_total += sub_totals._2
+    }
+    node.freeAnnotations("DNA_total") = dna_total.toString
+    node.freeAnnotations("RNA_total") = rna_total.toString
+    node.freeAnnotations("RNA_prop") = (rna_total.toDouble/(rna_total.toDouble + dna_total.toDouble)).toString
+    (rna_total,dna_total)
+  }
+
+
   /**
     * we want to carry the grafted color downwards into the tree
     * @param node               the RichNode to recurse on

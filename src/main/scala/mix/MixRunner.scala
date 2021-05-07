@@ -2,9 +2,8 @@ package main.scala.mix
 
 import java.io._
 
-import scala.collection.JavaConversions._
+// import scala.collection.JavaConversions._
 import java.io.{File, FileInputStream, FileOutputStream}
-
 import beast.util.TreeParser
 import main.scala.annotation.AnnotationsManager
 import main.scala.node.{BestTree, NodeLinker, RichNode}
@@ -12,7 +11,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-
+import scala.collection.JavaConverters._
 import main.scala.mix.MixRunner.CacheApproach
 
 /**
@@ -30,7 +29,7 @@ object MixRunner {
     */
   private def lowLevelProcessesMix(mixPackage: MixFilePackage): Int = {
 
-    val mixprogram = List[String](mixPackage.mixDirToRunIn.getAbsolutePath + File.separator + "mix")
+    val mixprogram: java.util.List[String] = java.util.Arrays.asList(mixPackage.mixDirToRunIn.getAbsolutePath + File.separator + "mix")
     val pb = new ProcessBuilder(mixprogram)
 
     pb.directory(mixPackage.mixDirToRunIn)
@@ -214,6 +213,7 @@ object MixRunner {
     //RichNode.recCheckNodeConsistency(rootNode)
 
     RichNode.fixGraftedColors(rootNode, "red")
+
 
     // count nodes before
     println("before collapsing nodes " + rootNode.countSubNodes())

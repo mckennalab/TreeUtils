@@ -3,25 +3,28 @@ name := "TreeUtils"
 
 version := "1.4"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.13.5"
 
 resolvers += Resolver.sonatypeRepo("public")
+resolvers += Resolver.sonatypeRepo("releases")
 
-libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.8" % "test"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3"
 
-libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.8"
+libraryDependencies += "org.typelevel" %% "discipline-scalatest" % "2.1.4" % Test
 
-libraryDependencies += "com.google.code.gson" % "gson" % "2.6.2"
+libraryDependencies += "org.typelevel" %% "discipline-scalatest" % "2.1.4"
+
+libraryDependencies += "com.google.code.gson" % "gson" % "2.8.6"
 
 libraryDependencies += "info.picocli" % "picocli" % "3.8.1"
 
 resolvers += Resolver.bintrayRepo("commercetools", "maven")
 
-libraryDependencies += "io.sphere" %% "sphere-util" % "0.9.17"
-libraryDependencies += "io.sphere" %% "sphere-json" % "0.9.17"
-libraryDependencies += "io.sphere" %% "sphere-mongo" % "0.9.17"
+// libraryDependencies += "io.sphere" %% "sphere-util" % "0.12.1"
+// libraryDependencies += "io.sphere" %% "sphere-json" % "0.12.1"
+// libraryDependencies += "io.sphere" %% "sphere-mongo" % "0.12.1"
 
-scalacOptions += "-target:jvm-1.7"
+// scalacOptions += "-target:jvm-1.7"
 
 // set the main class for packaging the main jar
 // 'run' will still auto-detect and prompt

@@ -146,6 +146,10 @@ class MixMain extends Runnable with LazyLogging {
       println("Resetting child annotations after adding cell annotations...")
       rootNode.resetChildrenAnnotations()
       RichNode.aggregateKeyword(rootNode, "name", ",")
+
+      // fix the total sum of the DNA/RNA counts
+      RichNode.fixDNASource(rootNode);
+
     }
 
     // sort the order of children node according to an annotation
