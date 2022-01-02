@@ -4,10 +4,10 @@ import beast.evolution.tree.Node
 import beast.util.TreeParser
 import main.scala.annotation.AnnotationsManager
 import main.scala.cells.CellAnnotations
-import main.scala.mix.{EventContainer, MixParser}
+import main.scala.mix.EventContainer
 
 import scala.collection.JavaConverters._
-import scala.collection.{SortedMap, mutable}
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -552,17 +552,17 @@ object RichNode {
     node.children.size match {
       case 0 => {
         node.parsimonyEvents = node.eventString.get
-        println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
+        //println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
         node.eventString.get
       }
       case 1 => {
         node.parsimonyEvents = backAssignGenotypes(node.children(0))
-        println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
+        //println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
         node.parsimonyEvents
       }
       case 2 => {
         node.parsimonyEvents = RichNode.commonEvents(node.children.map{child => backAssignGenotypes(child)})
-        println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
+        //println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
         node.parsimonyEvents
       }
       case _ => {

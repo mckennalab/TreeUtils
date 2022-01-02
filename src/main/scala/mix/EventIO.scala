@@ -37,6 +37,8 @@ object EventIO {
     inputFile.zipWithIndex.foreach { case (line, index) => {
       val lineTks = line.split("\t")
 
+      assert(lineTks(0).split("_").size > 2,"Unable to split event line into tokens on the '_' char")
+
       // assign columns to the events
       EventInformation.addEvents(lineTks(0).split("_"), lineTks(2).toInt)
 
@@ -50,7 +52,7 @@ object EventIO {
       builder += evt
     }
     }
-
+    println("Loaded " + cellAnnotations.size + " cell events")
     val evtArray = builder.toArray
     new EventContainerImpl(sample,evtArray,cellAnnotations,evtArray(0).events.size)
   }

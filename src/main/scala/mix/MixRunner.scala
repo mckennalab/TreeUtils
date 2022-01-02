@@ -4,15 +4,11 @@ import java.io._
 
 // import scala.collection.JavaConversions._
 import java.io.{File, FileInputStream, FileOutputStream}
+import java.nio.ByteBuffer
+
 import beast.util.TreeParser
 import main.scala.annotation.AnnotationsManager
 import main.scala.node.{BestTree, NodeLinker, RichNode}
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
-import scala.collection.JavaConverters._
-import main.scala.mix.MixRunner.CacheApproach
 
 /**
   * Control the mix program
@@ -61,14 +57,13 @@ object MixRunner {
 
     // copy the mix file
     val dest = new File(mixPackage.mixDirToRunIn + "/mix")
-    println(dest.getAbsolutePath)
-
+    println("Running mix wiht " + dest.getAbsolutePath)
 
     copyNioBuffered(mixLocation.getAbsolutePath, dest.getAbsolutePath)
 
     dest.setExecutable(true)
     // run and assert that we didn't fail
-    assert(lowLevelProcessesMix(mixPackage) == 0)
+    assert(lowLevelProcessesMix(mixPackage) == 0, "Running MIX failed " + mixPackage.mixDirToRunIn + " " + mixPackage.mixInputAlleles)
   }
 
   /**

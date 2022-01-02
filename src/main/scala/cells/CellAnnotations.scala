@@ -10,13 +10,11 @@ import scala.io.Source
 class CellAnnotations(cellFile: File) {
 
   // load up the annotation file
-  val cells = Source.fromFile(cellFile).getLines()
-
-  // get the cells loaded up
+  val cells = Source.fromFile(cellFile).getLines
   val cellBuffer = new ArrayBuffer[CellAnnotation]()
   println("loading annotations from " + cellFile.getAbsolutePath)
 
-  // change the format -- we assume column one is the cell ID, two is the event string, and the rest are free-form annotations
+  // we assume column one is the cell ID, two is the event string, and the rest are free-form annotations
   val headerString = cells.next().split("\t")
 
   val cellID = headerString(0)

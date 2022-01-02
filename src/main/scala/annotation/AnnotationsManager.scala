@@ -1,12 +1,9 @@
 package main.scala.annotation
 
-import java.io.File
-
 import main.scala.mix.EventContainer
 import main.scala.node.RichNode
 
 import scala.collection.mutable.HashMap
-import scala.io.Source
 
 /**
   * load up all the annotation files, and make a set of mappings
@@ -24,14 +21,13 @@ class AnnotationsManager(evtContainer: EventContainer) {
   var eventDefinitionsToAnnotations = evtContainer.rawAnnotations
 
   evtContainer.events.foreach{evt => {
-    println("adding event with " + evt.events.size)
+    //println("adding event with " + evt.events.size)
     val annotations = evtContainer.rawAnnotations.getOrElse(evt.name,new HashMap[String,String]())
     if (annotations.size == 0)
       println("No annotations for cell " + evt.name)
     annotationMapping(evt.name) = AnnotationEntry("UNKNOWN",evt.name,evt.count,evt.proportion,evt.events,annotations)
     cladeMapping(evt.name) = CladeEntry(evtContainer.sample,"ALL","black")
     sampleTotals(evt.sample) = sampleTotals.getOrElse(evt.sample,0) + evt.count
-    println("sample totals " + sampleTotals(evt.sample) + " event sample " + evt.sample)
   }}
 
 
