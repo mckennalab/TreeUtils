@@ -55,4 +55,4 @@ cellID	hmid	detectable	annotation1	annotation2	annotation3
 
 The first two columns are required, the first being a linear list of cell IDs, the second being a editing outcome for the cell, which is used to match against the tree. The follow columns name are arbitrary and you should name them as you'd like to see on the resulting tree. For instance annotation1 could be changed to reads_captured_in_this_cell and you could fill the column with the number of RNA seq reads you saw for this sample. 
 
-
+The resulting trees can then be be visualized with the [D3 scripts](https://github.com/mckennalab/SingleCellLineage/tree/master/plots/phylogeny) from previous papers. The visualization requires some customization for the resulting data sources and annotations you've provided in your annotations file.
