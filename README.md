@@ -1,6 +1,19 @@
 # TreeUtils
 A simple Scala tool to handle running the PHILIP MIX parsimony program and generating JSON output trees. You'll need a compiled executable of [PHYLIP](https://evolution.genetics.washington.edu/phylip.html) available on your system.
 
+## Building
+
+TreeUtils can be built with Scala and [sbt](https://www.scala-sbt.org/). To build the executable you'll need to run:
+
+```
+sbt assembly
+```
+
+This should make an executable jar file in the subdirectory:
+
+```
+./target/scala-2.12/TreeUtils-assembly-1.4.jar
+```
 
 ## Tree building script:
 
