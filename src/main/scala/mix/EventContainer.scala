@@ -120,8 +120,8 @@ case class SubsettedEventContainer(mevents: Array[Barcode],
 
 object EventContainer {
   /**
-    * this function takes an event container and subsets it based on specified events over specified sites. It only
-    * looks at / outputs specified sites, so if you want a site included regardless of content add it as a wildcard
+    * this function takes an event container and subsets it based on events over only specified sites. It only
+    ,* looks at / outputs specified sites, so if you want a site included regardless of content add it as a wildcard
     *
     * @param container      the event container to generate a subset for
     * @param sitesToCapture the sites that we look at and the specified genotype (wildcard for anything)
@@ -174,7 +174,7 @@ object EventContainer {
           siteList.foreach { coveredSite => partialEventArray(coveredSite) = event.events(coveredSite) }
         }
 
-        println(partialEventArray.mkString("-") + " from " + event.events.mkString("-"))
+        //println(partialEventArray.mkString("-") + " from " + event.events.mkString("-"))
       }
       }
 
@@ -186,7 +186,7 @@ object EventContainer {
       if (eventsToNames contains parentEvents) {
         val parent = eventsToNames(parentEvents)
         nameToChildren(parent) = nameToChildren(parent) :+ event.name
-        println("EXISTING PARENT " + parent + " parent event " + parentEvents + " to " + nameToChildren(parent).mkString(",") + " old evt " + event.events.mkString("_"))
+        //println("EXISTING PARENT " + parent + " parent event " + parentEvents + " to " + nameToChildren(parent).mkString(",") + " old evt " + event.events.mkString("_"))
 
         eventsToCounts(parent) = eventsToCounts.getOrElse(parent, 0) + event.count
         eventsToProps(parent) = eventsToProps.getOrElse(parent, 0.0) + event.proportion
@@ -204,7 +204,7 @@ object EventContainer {
         // handle an edge case here -- if the parent doesn't exist
         var eventNames = nameToChildren.getOrElse(parentEvents, Array[String]())
         nameToChildren(parentName) = eventNames :+ event.name
-        println("NEW PARENT " + parentName + " new parent event " + parentEvents + " to " + nameToChildren(parentName).mkString(",") + " old evt " + event.events.mkString("_"))
+        //println("NEW PARENT " + parentName + " new parent event " + parentEvents + " to " + nameToChildren(parentName).mkString(",") + " old evt " + event.events.mkString("_"))
 
         eventsToCounts(parentEvents) = eventsToCounts.getOrElse(parentEvents, 0) + event.count
         eventsToProps(parentEvents) = eventsToProps.getOrElse(parentEvents, 0.0) + event.proportion
@@ -221,7 +221,7 @@ object EventContainer {
 
 
     (SubsettedEventContainer(nameToChildren.map { case (name, ids) => {
-      println("Event in subset: " + name)
+      //println("Event in subset: " + name)
       val evt = namesToEvents(name)
       Barcode(evt.split(strToken),
         eventsToCounts(evt),
@@ -236,7 +236,7 @@ object EventContainer {
 
     val newEvents = container.events.filter {
       event => {
-        println(event.name + " -- root --> " + rootID)
+        //println(event.name + " -- root --> " + rootID)
         (children contains event.name) || (event.name == rootID)
       }
     }

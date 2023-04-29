@@ -308,10 +308,10 @@ object RichNode {
     val unAnnotatedBuilder = new ArrayBuffer[RichNode]()
 
     if (testDoubleConversation(nodes,firstAnnotation)) {
-      println("SORTING DOUBLE " + firstAnnotation)
+      //println("SORTING DOUBLE " + firstAnnotation)
       sortNodesDoubleValue(nodes, orderedAnnotations, unAnnotatedBuilder)
     } else {
-      println("SORTING String " + firstAnnotation)
+      //println("SORTING String " + firstAnnotation)
       sortNodesStringValue(nodes, orderedAnnotations, unAnnotatedBuilder)
     }
   }
@@ -347,7 +347,7 @@ object RichNode {
 
     nodes.foreach { case (node) => {
       val annotationValue = toDouble(node.freeAnnotations.getOrElse(firstAnnotation, lastAnnotationConstant)).get
-      println(annotationValue + " from " + node.freeAnnotations.getOrElse(firstAnnotation, lastAnnotationConstant))
+      //println(annotationValue + " from " + node.freeAnnotations.getOrElse(firstAnnotation, lastAnnotationConstant))
       if (annotationValue == lastAnnotationConstant) {
         unAnnotatedBuilder += node
       } else {
@@ -463,7 +463,7 @@ object RichNode {
         addCells(child, childAnnot, addedColor)
       }}
     } else {
-      val cellsToAdd = childAnnot.findMatchingCells(node.eventString.get.mkString("-"))
+      val cellsToAdd = childAnnot.findMatchingCells(node.eventString.get.mkString("_"))
       cellsToAdd.foreach{cell => {
         val newONode = new Node(cell.name)
         newONode.setHeight(node.height + 1.0)
@@ -489,7 +489,7 @@ object RichNode {
     * @param numberOfTargets the number of targets
     */
   def applyParsimonyGenotypes(rootNode: RichNode, linker: NodeLinker, container: EventContainer, numberOfTargets: Int = 10): Unit = {
-    println(numberOfTargets)
+    //println(numberOfTargets)
     // lookup each link between a subnode and the root, and assign it's genotypes recursively
     rootNode.children.foreach { newChild => recAssignGentoypes(rootNode, newChild, linker, container) }
   }
@@ -623,8 +623,8 @@ object RichNode {
     if (node.children.size > 0)
       print(node.children(0).count + " -> ")
     scala.util.Sorting.quickSort(node.children)
-    if (node.children.size > 0)
-      println(node.children(0).count)
+    //if (node.children.size > 0)
+    //  println(node.children(0).count)
     node.children.foreach { case (nd) => reorderChildrenByAlleleString(nd) }
   }
 

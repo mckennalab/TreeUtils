@@ -57,7 +57,7 @@ object MixRunner {
 
     // copy the mix file
     val dest = new File(mixPackage.mixDirToRunIn + "/mix")
-    println("Running mix wiht " + dest.getAbsolutePath)
+    println("Running mix with " + dest.getAbsolutePath)
 
     copyNioBuffered(mixLocation.getAbsolutePath, dest.getAbsolutePath)
 

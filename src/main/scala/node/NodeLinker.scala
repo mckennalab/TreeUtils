@@ -27,7 +27,6 @@ class NodeLinker {
   }
 
   def addEdges(linker: NodeLinker): Unit = {
-    // check that we don't already have this edge in our graph
     linker.arrayOfConnections.foreach { edge => {
       addEdge(edge)
     }}

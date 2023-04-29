@@ -16,7 +16,7 @@ case class Barcode(events: Array[String], count: Int, proportion: Double, sample
     * @param index
     * @return
     */
-  def toMixString(): Tuple3[String,Boolean,Int] = {
+  def toMixString(knownLength: Int): Tuple3[String,Boolean,Int] = {
     var isWT = true
 
     val mixEncoding = (1 until EventInformation.numberOfColumns()).map{ ind => {
@@ -36,6 +36,7 @@ case class Barcode(events: Array[String], count: Int, proportion: Double, sample
         }
       }
     }}.mkString("")
+    assert(mixEncoding.size == knownLength -1,"Resulting mix string should be " + (knownLength-1) + " but was instead " + mixEncoding.size + " length characters")
 
     val ret = mixName + mixEncoding
 

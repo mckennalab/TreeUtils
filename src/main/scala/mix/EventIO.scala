@@ -60,7 +60,7 @@ object EventIO {
   /**
     * convert text input into nodes
     */
-  def readCellObject(allCellsFile: File, sample: String): EventContainer = {
+  def  readCellObject(allCellsFile: File, sample: String): EventContainer = {
 
     val cellAnnotations = new mutable.HashMap[String,HashMap[String,String]]()
 
@@ -134,14 +134,20 @@ object EventIO {
     // -----------------------------------------------------------------------------------
     // map the each of the events to associated weights in PHYLIP space and write to disk
     // -----------------------------------------------------------------------------------
-    println(eventsContainer.allEvents.mkString("."))
-    val weights = eventsContainer.allEvents.map {
+    //println(eventsContainer.allEvents.mkString("."))
+    //assert(eventsContainer.allEvents.size == EventInformation.numberOfColumns(),eventsContainer.allEvents.size + " NOT EQUAL " + EventInformation.numberOfColumns())
+    val weights = EventInformation.orderedEvents.map{case(evtInfo) => {
+      scaleValues(eventsContainer.eventToCount(evtInfo.eventString), 0, maxCount)
+    }}
+    assert(weights.size == EventInformation.numberOfColumns(),weights.size + " NOT EQUAL " + EventInformation.numberOfColumns())
+    assert(EventInformation.orderedEvents.size == EventInformation.numberOfColumns(),EventInformation.orderedEvents.size + " NOT EQUAL " + EventInformation.numberOfColumns())
+    /*val weights = eventsContainer.allEvents.map {
       case (event) => {
         scaleValues(eventsContainer.eventToCount(event), 0, maxCount)
       }
-    }.toList
+    }.toList*/
 
-    println(weights.mkString(","))
+    //println(weights.mkString(","))
     weightFile.write(weights.mkString("") + "\n")
     weightFile.close()
 
@@ -149,8 +155,10 @@ object EventIO {
 
     var written_a_wild_type_allele = false
     var eventStringSize = -1
+
     eventsContainer.events.foreach { evt => {
-      val outputStr = evt.toMixString()
+
+      val outputStr = evt.toMixString(weights.size)
       if (eventStringSize > 0)
         assert(eventStringSize == outputStr._3)
       else

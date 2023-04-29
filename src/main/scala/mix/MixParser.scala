@@ -50,7 +50,10 @@ class MixParser(mixOutput: String, eventsToNumbers: EventContainer, treeToUse: I
             treeToGenotypes(currentTreeNumber) = new ArrayBuffer[Edge]()
           }
         }
-        else if (inGenotypeSection && (line.contains("yes") || line.contains("no") || line.contains("maybe"))) {
+        else if (inGenotypeSection && line.contains("1              ")) {
+          println("*****Warning*****: Dropping invalid MIX line: " + line)
+        }
+        else if (inGenotypeSection && (line.contains("yes") || line.contains("no") || line.contains("maybe") || line.contains("1              "))) {
           if (currentTreeNumber == treeToUse) {
             if (currentGenotype.isDefined) {
               treeToGenotypes(currentTreeNumber) += currentGenotype.get
@@ -60,7 +63,7 @@ class MixParser(mixOutput: String, eventsToNumbers: EventContainer, treeToUse: I
             currentGenotype.get.addChars(sp.slice(3, sp.size).mkString(""))
           }
         }
-        else if (inGenotypeSection && line.map{chr => if (chr == ' ' || chr == '1' || chr == '.' || chr == '?') 0 else 1}.sum > 0) {
+        else if (inGenotypeSection && line.map{chr => if (chr == ' ' || chr == '0' || chr == '1' || chr == '.' || chr == '?') 0 else 1}.sum > 0) {
           inGenotypeSection = false
           if (currentGenotype.isDefined) {
             treeToGenotypes(currentTreeNumber) += currentGenotype.get
@@ -73,7 +76,9 @@ class MixParser(mixOutput: String, eventsToNumbers: EventContainer, treeToUse: I
         else if (inGenotypeSection) {
           if (currentTreeNumber == treeToUse) {
             val sp = line.trim.split(" +")
-            currentGenotype.get.addChars(sp.slice(0, sp.size).mkString(""))
+            if (currentGenotype.isDefined) {
+              currentGenotype.get.addChars(sp.slice(0, sp.size).mkString(""))
+            }
           }
         }
       }

@@ -2,13 +2,13 @@ package main.scala
 
 import java.io.{File, PrintWriter}
 
+import com.typesafe.scalalogging.LazyLogging
 import main.scala.annotation.AnnotationsManager
 import main.scala.cells.CellAnnotations
-import main.scala.mix._
-import main.scala.node.{BestTree, RichNode}
-import picocli.CommandLine
-import com.typesafe.scalalogging.LazyLogging
 import main.scala.mix.MixRunner.CacheApproach
+import main.scala.mix._
+import main.scala.node.RichNode
+import picocli.CommandLine
 
 /**
   * created by aaronmck on 2/13/14
@@ -83,13 +83,14 @@ class MixMain extends Runnable with LazyLogging {
     description = Array("the path for the MIX executable"))
   private var mixExecutableLocation: String = ""
 
-
-  // ------------------------------------------------------------------------------------------------------------
-  // General options
-  // ------------------------------------------------------------------------------------------------------------
   @CommandLine.Option(names = Array("-subsetFirstX", "--subsetFirstX"), required = false, paramLabel = "FILE",
     description = Array("Use the first X targets to build the tree, then use the remaining targets to build sub-trees"))
   private var firstX = -1
+
+  @CommandLine.Option(names = Array("-clusterLabel", "--clusterLabel"), required = false, paramLabel = "FILE",
+    description = Array("use a column in the text file to define clusters as the first level of the tree"))
+  private var clusterLabel : Option[String] = None
+
 
   @CommandLine.Option(names = Array("-sortByAnnotations", "--sortByAnnotations"), required = false, paramLabel = "FILE",
     description = Array("a list of annotations to sort cells by"))
@@ -122,7 +123,7 @@ class MixMain extends Runnable with LazyLogging {
 
     val rootNode = if (firstX > 0) {
       println("Running split-tree...")
-      EventSplitter.splitInTwo(new File(mixRunLocation),
+      EventSplitter.splitBySubsetTargets(new File(mixRunLocation),
         readEventsObj,
         firstX,
         sample,

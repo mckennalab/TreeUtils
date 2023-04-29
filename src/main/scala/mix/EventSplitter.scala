@@ -6,7 +6,6 @@ import beast.evolution.tree.Node
 import main.scala.annotation.AnnotationsManager
 import main.scala.mix.MixRunner.CacheApproach
 import main.scala.node.RichNode
-import main.scala.stats.Barcode
 
 import scala.collection.mutable.HashMap
 
@@ -17,14 +16,25 @@ import scala.collection.mutable.HashMap
   */
 object EventSplitter {
 
+  def splitByAnnotation(mixDir: File,
+                        eventContainer: EventContainer,
+                        annotationName: String,
+                        sample: String,
+                        annotationMapping: AnnotationsManager,
+                        graftedNodeColor: String = "red"): RichNode = {
+
+
+  }
+
+
   // TODO: preserve the underlying name
-  def splitInTwo(mixDir: File,
-                 eventContainer: EventContainer,
-                 firstXSites: Int,
-                 sample: String,
-                 annotationMapping: AnnotationsManager,
-                 graftedNodeColor: String = "red",
-                 useCache: Boolean = false): RichNode = {
+  def splitBySubsetTargets(mixDir: File,
+                           eventContainer: EventContainer,
+                           firstXSites: Int,
+                           sample: String,
+                           annotationMapping: AnnotationsManager,
+                           graftedNodeColor: String = "red",
+                           useCache: Boolean = false): RichNode = {
 
     // setup an array of wildcards over the sites we want to split on
     val sites = (0 until firstXSites).map {
