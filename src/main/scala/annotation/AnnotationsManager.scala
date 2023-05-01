@@ -1,14 +1,13 @@
 package main.scala.annotation
 
 import main.scala.mix.EventContainer
-import main.scala.node.RichNode
 
 import scala.collection.mutable.HashMap
 
 /**
   * load up all the annotation files, and make a set of mappings
   * for each node name to a set of annotations.  On request,
-  * annotate each node with it's appropriate info
+  * annotate each node with its appropriate info
   */
 class AnnotationsManager(evtContainer: EventContainer) {
   val seperator = "\t"
@@ -29,16 +28,4 @@ class AnnotationsManager(evtContainer: EventContainer) {
     cladeMapping(evt.name) = CladeEntry(evtContainer.sample,"ALL","black")
     sampleTotals(evt.sample) = sampleTotals.getOrElse(evt.sample,0) + evt.count
   }}
-
-
-  /**
-    * lookup the clade color for this event; if there isn't one, return black (our default)
-    *
-    * @param node the event node
-    * @return a color string
-    */
-  def setColor(node: RichNode, parentNode: Option[RichNode]): Tuple2[String,String] = {
-    return ("nodecolor","black")
-  }
-
 }

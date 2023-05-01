@@ -109,7 +109,7 @@ class MixMain extends Runnable with LazyLogging {
     } else if (new File(allelesFile).getAbsolutePath.endsWith("txt")) {
       EventIO.readCellObject(new File(allelesFile), sample)
     } else {
-      throw new IllegalStateException("Unable to determine filetype for " + allelesFile)
+      throw new IllegalStateException("Unable to determine lineage barcode filetype for " + allelesFile)
     }
 
     // ------------------------------------------------------------
@@ -131,9 +131,11 @@ class MixMain extends Runnable with LazyLogging {
     } else {
       println("Running single tree...")
       val cacheApproach = if (useCached) CacheApproach.USE_CACHE else CacheApproach.NO_OVERWRITE
+
       val (rootNode, linker) = MixRunner.mixOutputToTree(
         MixRunner.runMix(new File(mixRunLocation), readEventsObj, cacheApproach), readEventsObj, annotationMapping, "root")
       MixRunner.postProcessTree(rootNode, linker, readEventsObj, annotationMapping)
+
       rootNode
     }
 

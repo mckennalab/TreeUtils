@@ -88,6 +88,8 @@ object EventIO {
       // handle any annotations specified in the file
       val annotations = new mutable.HashMap[String,String]()
       annotations("cellIDs") = cells.replace("\"","")
+      header.slice(3,header.length).zip(lineTks.slice(3,lineTks.length)).foreach{case (hd,entry) => annotations(hd) = entry}
+
       cellAnnotations(cellID) = annotations
 
       val evt = Barcode(hmid.replace("\"","").split("-"), 1, 1.0 / (inputFile.size - 1), sample, cellID)

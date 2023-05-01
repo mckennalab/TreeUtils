@@ -2,9 +2,8 @@ package main.scala.mix
 
 import main.scala.stats.Barcode
 
-import scala.collection.mutable.HashMap
-
 import scala.collection.immutable.Set
+import scala.collection.mutable.HashMap
 
 /**
   * the basic event container trait. everything we need for creating a tree from events
@@ -33,14 +32,6 @@ trait EventContainer {
   def prettyPrint
 }
 
-/**
-  * store all the relevant information about the editing outcomes for MIX
-  *
-  * @param mevents        the events as an array
-  * @param meventToCount  the unique individual site events to their counts
-  * @param mnumberToEvent the index of a single event to it's string representation
-  * @param meventToNumber convert an event to it's index
-  */
 class EventContainerImpl(msample: String,
                          mevents: Array[Barcode],
                          meventToAnnotations: HashMap[String, HashMap[String, String]],
@@ -85,8 +76,7 @@ class EventContainerImpl(msample: String,
   * @param eventsToChildren the mapping of new ID to old ID
   */
 case class SubsettedEventContainer(mevents: Array[Barcode],
-                                   eventContainer: EventContainer,
-                                   eventsToChildren: HashMap[String, Array[String]]) extends EventContainer {
+                                   eventContainer: EventContainer) extends EventContainer {
 
   var mTotalEvents = mevents
 
@@ -119,13 +109,23 @@ case class SubsettedEventContainer(mevents: Array[Barcode],
 }
 
 object EventContainer {
+/*
+  def splitByAnnotation(container: EventContainer,
+                        annotationName: String,
+                        considerCase: Boolean = false,
+                        annotations: AnnotationsManager) : HashMap[String, EventContainer] = {
+
+    val uniqueAnnotations =
+
+  }*/
+
   /**
-    * this function takes an event container and subsets it based on events over only specified sites. It only
+    * this function takes an event container and subsets it based on events over specified target sites. It only
     ,* looks at / outputs specified sites, so if you want a site included regardless of content add it as a wildcard
     *
     * @param container      the event container to generate a subset for
     * @param sitesToCapture the sites that we look at and the specified genotype (wildcard for anything)
-    * @return an event container with the reduced root tree, and mapping of events in the root tree to those in each subtree
+    * @return an event container with the reduced root tree EventContainer, and mapping of events in the root tree to those in each subtree
     */
   def subset(container: EventContainer,
              sitesToCapture: Array[Tuple2[Int, String]],
@@ -174,7 +174,6 @@ object EventContainer {
           siteList.foreach { coveredSite => partialEventArray(coveredSite) = event.events(coveredSite) }
         }
 
-        //println(partialEventArray.mkString("-") + " from " + event.events.mkString("-"))
       }
       }
 
@@ -209,12 +208,6 @@ object EventContainer {
         eventsToCounts(parentEvents) = eventsToCounts.getOrElse(parentEvents, 0) + event.count
         eventsToProps(parentEvents) = eventsToProps.getOrElse(parentEvents, 0.0) + event.proportion
 
-        /*container.dangerAddEvent(Event(partialEventArray,
-          partialEventArray.map { st => eventsToIDs(st) },
-          eventsToCounts(parentEvents),
-          eventsToProps(parentEvents),
-          sample,
-          parentName))*/
       }
     }
     }
@@ -229,7 +222,7 @@ object EventContainer {
         sample,
         name)
     }
-    }.toArray, container, nameToChildren), nameToChildren)
+    }.toArray, container), nameToChildren)
   }
 
   def subsetByChildren(container: EventContainer, children: Array[String], rootID: String): EventContainer = {
