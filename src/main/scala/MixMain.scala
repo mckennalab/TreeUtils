@@ -128,6 +128,13 @@ class MixMain extends Runnable with LazyLogging {
         firstX,
         sample,
         annotationMapping)
+    } else if (clusterLabel.isDefined) {
+      EventSplitter.splitByAnnotation(new File(mixRunLocation),
+        readEventsObj,
+        clusterLabel.get,
+        sample,
+        annotationMapping,
+        10)
     } else {
       println("Running single tree...")
       val cacheApproach = if (useCached) CacheApproach.USE_CACHE else CacheApproach.NO_OVERWRITE

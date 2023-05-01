@@ -19,8 +19,7 @@ import scala.collection.mutable.HashMap
 object EventSplitter {
 
   def splitInputByAnnotation(eventContainer: EventContainer,
-                             annotationName: String,
-                             considerCase: Boolean = false): HashMap[String,EventContainer] = {
+                             annotationName: String): HashMap[String,EventContainer] = {
 
     if (!(eventContainer.rawAnnotations contains annotationName)) {
       throw new IllegalStateException("Unable to find annotation column to split events on named: " + annotationName)
@@ -52,25 +51,51 @@ object EventSplitter {
                         annotationName: String,
                         sample: String,
                         annotationMapping: AnnotationsManager,
+                        numberOfTargets: Int,
                         graftedNodeColor: String = "red"): RichNode = {
 
 
     // split the events into the root for the first X sites,
     // and sub-tree for individual nodes
-    val rootTreeContainer = EventContainer.(eventContainer, sites, sample)
+    val base_name = "annotation_root"
+    val bareRoot = new Node(base_name)
+    val linker = new NodeLinker()
+    val baseNode = RichNode(bareRoot, annotationMapping,None,numberOfTargets)
+    val childToTree = new mutable.HashMap[String, RichNode]()
 
-    // run the root tree, and fetch the results
-    println("Processing the root tree with nodes " + rootTreeContainer._1.events.map{evt => evt.events.mkString("_")}.mkString(", "))
-    val (rootNodeAndConnection,linker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, rootTreeContainer._1, CacheApproach.NO_OVERWRITE), rootTreeContainer._1, annotationMapping, "root")
+    EventSplitter.splitInputByAnnotation(eventContainer, annotationName).foreach {
+      case (annotation, childrenByAnnotation) => {
 
-    createSubTree(rootTreeContainer,linker, eventContainer, mixDir, rootNodeAndConnection, annotationMapping)
+        // MIX can't make a meaningful tree out of less than three nodes
+        if (childrenByAnnotation.events.size > 2) {
 
-    // post-process the final tree
-    MixRunner.postProcessTree(rootNodeAndConnection, linker, eventContainer, annotationMapping)
+          println("Processing the " + annotation + " tree with kids ")
+          val (childNode, childLinker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, childrenByAnnotation, CacheApproach.OVERWRITE),
+            childrenByAnnotation, annotationMapping, annotation, graftedNodeColor)
 
-    rootNodeAndConnection
+          childToTree(annotation) = childNode
+          childToTree(annotation).graftedNode = true
+          childLinker.shiftEdges(linker.getMaximumInternalNode, annotation)
+          linker.addEdge(Edge(base_name,childNode.name,base_name))
+          linker.addEdges(childLinker)
 
+          baseNode.graftToName(annotation, childToTree(annotation))
+        } else {
+          val baseAnnotation = new RichNode(new Node(annotation),
+            annotationMapping, Some(baseNode), numberOfTargets)
+          childrenByAnnotation.events.foreach { child => {
 
+            linker.addEdge(Edge(baseAnnotation.name, child.name, baseAnnotation.name))
+
+            val newNode = RichNode(new Node(child.name), annotationMapping, Some(baseAnnotation), child.events.size, graftedNodeColor)
+            newNode.graftedNode = true
+            baseNode.graftOnChild(baseAnnotation)
+          }
+          }
+        }
+      }
+    }
+    baseNode
   }
 
 
