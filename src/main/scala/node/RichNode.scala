@@ -21,6 +21,8 @@ case class RichNode(originalNd: Node,
                     numberOfTargets: Int = 10,
                     defaultNodeColor: String = "black") extends Ordered[RichNode] {
 
+  var dontDeleteNode = false
+
   // store the orginal node for later if needed
   val originalNode = originalNd
 
@@ -51,18 +53,20 @@ case class RichNode(originalNd: Node,
   var sampleProportions = new mutable.HashMap[String, Double]()
 
   // do we have taxa counts to fill in? internal nodes won't have these values but leaves will
-  myAnnotations.map{annotation => {
+  myAnnotations.map { annotation => {
     sampleName = annotations.cladeMapping(annotation.sample).clade // myAnnotations.get.sample
     color = annotations.cladeMapping(annotation.sample).color
     count = annotation.count
     sampleProportions(sampleName) = annotation.proportion
-    annotation.additionalEntries.map{case(k,v) => {
+    annotation.additionalEntries.map { case (k, v) => {
       freeAnnotations(k) = v
-    }}
-  }}
+    }
+    }
+  }
+  }
 
   // explicitly pull out our event string
-  val eventString: Option[Array[String]] = if (myAnnotations.isDefined) Some(myAnnotations.get.event) else None
+  var eventString: Option[Array[String]] = if (myAnnotations.isDefined) Some(myAnnotations.get.event) else None
 
   // our parsimony events
   var parsimonyEvents = Array.fill(numberOfTargets)("NONE")
@@ -115,7 +119,7 @@ case class RichNode(originalNd: Node,
     */
   def sortChildren(sortingAnnotations: Array[String]) {
 
-    children = RichNode.sortNodes(children,sortingAnnotations)
+    children = RichNode.sortNodes(children, sortingAnnotations)
 
     children.foreach(cd => cd.sortChildren(sortingAnnotations))
   }
@@ -211,7 +215,7 @@ case class RichNode(originalNd: Node,
     * we order RichNodes based on their parsimony allele string
     *
     * @param that the other node to compare to
-    **/
+    * */
   def compare(that: RichNode) = {
     val ret = this.parsimonyEvents.zip(that.parsimonyEvents).map { case (thisEvent, thatEvent) => {
       if (thisEvent == thatEvent)
@@ -241,13 +245,14 @@ object RichNode {
 
   /**
     * we want to carry the grafted color downwards into the tree
-    * @param node               the RichNode to recurse on
+    *
+    * @param node the RichNode to recurse on
     */
   def fixGraftedColors(node: RichNode, graftedColor: String, passedGrafted: Boolean = false): Unit = {
     if (passedGrafted | node.graftedNode)
       node.nodeColor = graftedColor
-    node.children.foreach{child =>
-      fixGraftedColors(child,graftedColor,passedGrafted | node.graftedNode)
+    node.children.foreach { child =>
+      fixGraftedColors(child, graftedColor, passedGrafted | node.graftedNode)
     }
   }
 
@@ -257,9 +262,9 @@ object RichNode {
     *
     * @param node the RichNode to recurse on
     */
-  def fixDNASource(node: RichNode): Tuple2[Int,Int] = {
-    var rna_total = node.freeAnnotations.getOrElse("rna_count","0").toInt
-    var dna_total = node.freeAnnotations.getOrElse("dna_count","0").toInt
+  def fixDNASource(node: RichNode): Tuple2[Int, Int] = {
+    var rna_total = node.freeAnnotations.getOrElse("rna_count", "0").toInt
+    var dna_total = node.freeAnnotations.getOrElse("dna_count", "0").toInt
     node.children.foreach { child =>
       val sub_totals = fixDNASource(child)
       rna_total += sub_totals._1
@@ -267,23 +272,24 @@ object RichNode {
     }
     node.freeAnnotations("DNA_total") = dna_total.toString
     node.freeAnnotations("RNA_total") = rna_total.toString
-    node.freeAnnotations("RNA_prop") = (rna_total.toDouble/(rna_total.toDouble + dna_total.toDouble)).toString
-    (rna_total,dna_total)
+    node.freeAnnotations("RNA_prop") = (rna_total.toDouble / (rna_total.toDouble + dna_total.toDouble)).toString
+    (rna_total, dna_total)
   }
 
 
   /**
     * we want to carry the grafted color downwards into the tree
-    * @param node               the RichNode to recurse on
+    *
+    * @param node the RichNode to recurse on
     */
   def toNewickString(node: RichNode): String = {
     if (node.children.size == 0)
       return node.name + ":1.0"
     else
-      "(" + node.children.map{child =>
+      "(" + node.children.map { child =>
         RichNode.toNewickString(child)
       }.mkString(",") +
-    "):1.0"
+        "):1.0"
   }
 
   def toDouble(s: String): Option[Double] = {
@@ -296,6 +302,7 @@ object RichNode {
 
   /**
     * Sort nodes based on alphabetical ordering of a series of annotations
+    *
     * @param orderedAnnotations the annotations
     */
   def sortNodes(nodes: Array[RichNode], orderedAnnotations: Array[String]): Array[RichNode] = {
@@ -307,7 +314,7 @@ object RichNode {
 
     val unAnnotatedBuilder = new ArrayBuffer[RichNode]()
 
-    if (testDoubleConversation(nodes,firstAnnotation)) {
+    if (testDoubleConversation(nodes, firstAnnotation)) {
       //println("SORTING DOUBLE " + firstAnnotation)
       sortNodesDoubleValue(nodes, orderedAnnotations, unAnnotatedBuilder)
     } else {
@@ -318,19 +325,21 @@ object RichNode {
 
   /**
     * test if this annotation can be converted to a number
-    * @param nodes our list of nodes
+    *
+    * @param nodes      our list of nodes
     * @param annotation the annotation to test for conversion
     * @return true if all values can convert to a number (or is empty)
     */
   def testDoubleConversation(nodes: Array[RichNode], annotation: String): Boolean = {
     var isNumber = true
-    nodes.foreach{nd => if ((nd.freeAnnotations contains annotation)) isNumber = isNumber & toDouble(nd.freeAnnotations(annotation)).isDefined}
+    nodes.foreach { nd => if ((nd.freeAnnotations contains annotation)) isNumber = isNumber & toDouble(nd.freeAnnotations(annotation)).isDefined }
     isNumber
   }
 
   /**
     * sort nodes based on a numberic value
-    * @param nodes the nodes we want to sort
+    *
+    * @param nodes              the nodes we want to sort
     * @param orderedAnnotations the list of annotations
     * @param unAnnotatedBuilder
     * @return
@@ -380,6 +389,7 @@ object RichNode {
 
   /**
     * sort nodes based on a string value
+    *
     * @param nodes
     * @param orderedAnnotations
     * @param unAnnotatedBuilder
@@ -389,7 +399,7 @@ object RichNode {
                                    orderedAnnotations: Array[String],
                                    unAnnotatedBuilder: ArrayBuffer[RichNode]): Array[RichNode] = {
 
-    val lastAnnotationConstant:String = "__LAST__"
+    val lastAnnotationConstant: String = "__LAST__"
     val firstAnnotation = orderedAnnotations(0)
 
     // first discover the values of the annotations, and then store them in order
@@ -429,7 +439,7 @@ object RichNode {
 
   /**
     *
-    * @param node               the RichNode to recurse on
+    * @param node the RichNode to recurse on
     * @param ourBranchJustOrgan
     */
   def assignBranchColors(node: RichNode, ourBranchJustOrgan: String = "false"): Unit = {
@@ -453,28 +463,31 @@ object RichNode {
   /**
     * add children cells to the terminal leaf nodes
     *
-    * @param node               the RichNode to recurse on
-    * @param childAnnot         the cell annotation object
+    * @param node       the RichNode to recurse on
+    * @param childAnnot the cell annotation object
     */
   def addCells(node: RichNode, childAnnot: CellAnnotations, addedColor: String = "white"): Unit = {
 
     if (node.children.size > 0) {
       node.children.foreach { child => {
         addCells(child, childAnnot, addedColor)
-      }}
+      }
+      }
     } else {
       val cellsToAdd = childAnnot.findMatchingCells(node.eventString.get.mkString("_"))
-      cellsToAdd.foreach{cell => {
+      cellsToAdd.foreach { cell => {
         val newONode = new Node(cell.name)
         newONode.setHeight(node.height + 1.0)
-        val richN = RichNode(newONode,node.annotations,Some(node),node.numberOfTargets,addedColor)
+        val richN = RichNode(newONode, node.annotations, Some(node), node.numberOfTargets, addedColor)
         richN.parsimonyEvents = cell.eventString.split("-")
-        cell.additionalAnnotations.foreach{case(name, value) => {
+        cell.additionalAnnotations.foreach { case (name, value) => {
           richN.freeAnnotations(name) = value
-        }}
+        }
+        }
         //println("adding " + cellsToAdd.size + " cells")
         node.children :+= richN
-      }}
+      }
+      }
     }
   }
 
@@ -560,8 +573,8 @@ object RichNode {
         //println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
         node.parsimonyEvents
       }
-      case 2 => {
-        node.parsimonyEvents = RichNode.commonEvents(node.children.map{child => backAssignGenotypes(child)})
+      case x if x > 1 => {
+        node.parsimonyEvents = RichNode.commonEvents(node.children.map { child => backAssignGenotypes(child) })
         //println("NODE GENOTYPE " + node.name + " node.parsimony " + node.parsimonyEvents.mkString("-"))
         node.parsimonyEvents
       }
@@ -573,15 +586,16 @@ object RichNode {
 
   /**
     * find the common events in a set of arrays
+    *
     * @param events an array of arrays, which contain events over target regions
     * @return the common events
     */
   def commonEvents(events: Array[Array[String]]): Array[String] = {
     assert(events.size > 0, "Events.size was less than one, please pass in at least one event")
-    var ret = events(0).map{tr => tr}
-    events.slice(1, events.size).foreach{evt =>
+    var ret = events(0).map { tr => tr }
+    events.slice(1, events.size).foreach { evt =>
       assert(evt.size == ret.size, "We saw an event set with a different number of events than the previous set")
-      evt.zipWithIndex.foreach{case(e,index) => if (!(ret(index) == e)) ret(index) = "NONE"}
+      evt.zipWithIndex.foreach { case (e, index) => if (!(ret(index) == e)) ret(index) = "NONE" }
     }
     ret
   }
@@ -599,17 +613,46 @@ object RichNode {
   def recAssignNames(node: RichNode, linker: NodeLinker): String = {
     // if we have a leaf -- where there are no children -- assign the name
     if (node.children.size == 0) {
+      if (node.name == null || node.name == "null") {
+        val edge = linker.lookupTos(node.name)
+        assert(edge.size > 0)
+        return edge(0).from
+      }
+    } else {
+      val names = node.children.map { case (nd) => recAssignNames(nd, linker) }.toSet.toList
+      if (node.name == null || node.name == "null") {
+        names.foreach{name => {
+          try {
+            val edge = linker.lookupTos(names(0))
+            assert(edge.size > 0)
+            return edge(0).from
+          } catch {
+            case e: Exception => {}
+          }
+        }}
+      }
+    }
+      return node.name
+
+  }
+
+  def recAssignNames_old(node: RichNode, linker: NodeLinker): String = {
+    // if we have a leaf -- where there are no children -- assign the name
+    if (node.children.size == 0) {
       val edge = linker.lookupTos(node.name)
       assert(edge.size > 0)
       return edge(0).from
     } else {
       val names = node.children.map { case (nd) => recAssignNames(nd, linker) }.toSet.toList
-      if (names.size != 1)
-        throw new IllegalStateException("Unable to assign the name for node with children " + names.mkString(","))
-      node.name = names(0)
-      val edge = linker.lookupTos(names(0))
-      assert(edge.size > 0)
-      return edge(0).from
+      if (names.size == 1) {
+        node.name = names(0)
+        val edge = linker.lookupTos(names(0))
+        assert(edge.size > 0)
+        return edge(0).from
+      }
+      else {
+        return node.name
+      }
     }
   }
 
@@ -662,9 +705,10 @@ object RichNode {
 
   /**
     * aggregate a keyword set on leaves up to parents
-    * @param node the initial node
-    * @param keyword the keyword to lookup in the node's free annotations
-    * @param sep the string used to join annotations
+    *
+    * @param node         the initial node
+    * @param keyword      the keyword to lookup in the node's free annotations
+    * @param sep          the string used to join annotations
     * @param noAnnotation the string to use if a leaf doesn't have the annotation
     * @return
     */
@@ -677,7 +721,7 @@ object RichNode {
         "NONE"
     } else {
 
-      val aggreagatedKeyword = node.children.map { case (nd) => aggregateKeyword(nd,keyword,sep) }.toSet.toList.mkString(sep)
+      val aggreagatedKeyword = node.children.map { case (nd) => aggregateKeyword(nd, keyword, sep) }.toSet.toList.mkString(sep)
       node.freeAnnotations(keyword) = aggreagatedKeyword
       aggreagatedKeyword
     }
@@ -700,32 +744,32 @@ object RichNode {
     * node starting from any branch marked with the 'is_spine' annotation. We'll use this annotation to
     * add caterpillar nodes to the d3 trees
     *
-    * @param node the node we're looking at recursively
+    * @param node            the node we're looking at recursively
     * @param recursivePillar is our parent a pillar? determines how we perform the traversal
     */
   def annotateTopOfCaterpillar(node: RichNode, recursivePillar: Boolean): Double = {
     // if we're NOT in a caterpillar, but we start one, recursively find the deepest this 'pillar goes
-    node.caterpillarDepth = (recursivePillar,node.inACatapiller) match {
-      case (false,true) => {
+    node.caterpillarDepth = (recursivePillar, node.inACatapiller) match {
+      case (false, true) => {
         // we start a caterpillar; find the maximum caterpillar-only depth of our children and store that as our caterpillarDepth
-        node.children.map{child => annotateTopOfCaterpillar(child,true)}.max
+        node.children.map { child => annotateTopOfCaterpillar(child, true) }.max
       }
-      case (true,true) => {
+      case (true, true) => {
         // we're in a caterpillar, and we're not yet the end, add our depth-to-parent to the longest of our children
-        node.children.map{child => annotateTopOfCaterpillar(child,true)}.max + node.distToParent
+        node.children.map { child => annotateTopOfCaterpillar(child, true) }.max + node.distToParent
       }
-      case (true,false) => {
+      case (true, false) => {
         // we're the first non-caterpillar node in a caterpillar chain. return 0
         0
       }
-      case (false,false) => {
+      case (false, false) => {
         // we're not in a caterpillar, and we're not marked as one, this is a zero
         0
       }
     }
 
     // now call this on all the children
-    node.children.foreach{child => annotateTopOfCaterpillar(node,node.inACatapiller)}
+    node.children.foreach { child => annotateTopOfCaterpillar(node, node.inACatapiller) }
 
     // and return our depth
     node.caterpillarDepth
@@ -832,7 +876,11 @@ object RichNode {
     * @return
     */
   def toKeyValue(sample: String, name: String, index: String, value: Any, sep: String = "\t", terminator: String = "\n"): String = {
-    return (sample + sep + name + sep + index + sep + value.toString + terminator)
+    val sm = if (sample == null) "null" else sample
+    val nm = if (name == null) "null" else name
+    val id = if (index == null) "null" else index
+    val vl = if (value == null) "null" else value
+    return (nm + sep + nm + sep + id + sep + vl.toString + terminator)
   }
 
   def toJSON(name: String, simple: Any, terminator: String = ",\n"): String = simple match {
@@ -840,6 +888,7 @@ object RichNode {
     case x: Int => "\"" + name + "\" : " + x + terminator
     case x: Double => "\"" + name + "\" : " + x + terminator
     case x: Float => "\"" + name + "\" : " + x + terminator
-    case _ => throw new IllegalStateException("We don't know what to do ")
+    case x if x == null => "\"" + name + "\" : \"null\"" + terminator
+    case _ => throw new IllegalStateException("We don't know what to do for " + simple)
   }
 }

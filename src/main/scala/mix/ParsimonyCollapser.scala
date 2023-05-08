@@ -15,28 +15,37 @@ object ParsimonyCollapser {
     */
   def collapseNodes(node: RichNode) {
     var stillRefining = true
+    println("LOOKING AT " + node.name)
 
-    while(stillRefining) {
+    while (stillRefining) {
       var newChildren = Array[RichNode]()
       stillRefining = false
       node.children.foreach { case (child) => {
-        // check to see if the grandchildren are grafted on -- in that case we don't want to destroy this node
-        val gchildsGrafted = child.children.foldLeft(false)((a,b) => b.graftedNode | a)
-        if (gchildsGrafted == false && child.children.size > 0 && child.parsimonyGenotypeDistance(node) == 0) { // old logic
-          //println("****Collapsing out node " + child.name)
-          // reconnect all the children-of-the-child nodes
-          child.children.foreach(chd => newChildren :+= chd)
-          stillRefining = true
-          if (child.graftedNode) {
-            node.nodeColor = "green"
-            node.graftedNode = true // inherit this upwards
+
+          // check to see if the grandchildren are grafted on -- in that case we don't want to destroy this node
+          val gchildsGrafted = child.children.foldLeft(false)((a, b) => b.graftedNode | a)
+          if (!child.dontDeleteNode &&
+            node.graftedNode == false &&
+            child.graftedNode == false &&
+            gchildsGrafted == false &&
+            child.children.size > 0 &&
+            child.parsimonyGenotypeDistance(node) == 0) { // old logic
+
+            //println("****Collapsing out node " + child.name)
+            // reconnect all the children-of-the-child nodes
+            println("KILLING " + node.name)
+            child.children.foreach(chd => newChildren :+= chd)
+            stillRefining = true
+            if (child.graftedNode) {
+              node.nodeColor = "green"
+              node.graftedNode = true // inherit this upwards
+            } else {
+              node.nodeColor = "yellow"
+            }
           } else {
-            node.nodeColor = "yellow"
+            newChildren :+= child
           }
-        } else {
-          newChildren :+= child
         }
-      }
       }
       node.children = newChildren
     }

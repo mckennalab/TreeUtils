@@ -9,6 +9,8 @@ class NodeLinker {
   private var arrayOfConnections = Array[Edge]()
   private var maximumMixNode = 0
 
+  def edgeCount(): Int = arrayOfConnections.length
+
   def getMaximumInternalNode = maximumMixNode
 
   def addEdge(edge: Edge): Unit = {

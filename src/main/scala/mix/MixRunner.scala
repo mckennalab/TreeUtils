@@ -81,9 +81,9 @@ object MixRunner {
     val fin = new FileInputStream(in).getChannel
     val fout = new FileOutputStream(out).getChannel
     val buff = ByteBuffer.allocate(4096)
-    while ( {
-      fin.read(buff) != -1 || buff.position > 0
-    }) {
+    while (
+      fin.read(buff) != -1 || buff.position() > 0
+      ) {
       buff.flip
       fout.write(buff)
       buff.compact
@@ -167,14 +167,20 @@ object MixRunner {
     println("Loading best tree...")
     val bestTreeContainer = BestTree(mixFilePackage.mixTree)
 
-    // ------------------------------------------------------------
-    // parse out the data from the mix (PHYLIP) output
-    // ------------------------------------------------------------
-    val mixParser = new MixParser(mixFilePackage.mixFile.getAbsolutePath, readEventsObj, bestTreeContainer.maxIndex, rootName)
-
     // load our tree
     //println("Best Tree " + bestTreeContainer.bestTreeString)
     val treeParser = new TreeParser(bestTreeContainer.bestTreeString, false, true, true, bestTreeContainer.maxIndex)
+
+    // ------------------------------------------------------------
+    // parse out the data from the mix (PHYLIP) output
+    // ------------------------------------------------------------
+    val mixParser = new MixParser(
+      mixFilePackage.mixFile.getAbsolutePath,
+      EventInformation.numberOfColumns(),
+      bestTreeContainer.maxIndex,
+      rootName,
+      treeParser.getNodeCount)
+
 
     // cleanup the mix output file
     println("Delete mixfile: " + mixFilePackage.mixFile)
@@ -207,7 +213,7 @@ object MixRunner {
     // check that the nodes we assigned are consistent
     //RichNode.recCheckNodeConsistency(rootNode)
 
-    RichNode.fixGraftedColors(rootNode, "red")
+    //RichNode.fixGraftedColors(rootNode, "red")
 
 
     // count nodes before
@@ -217,16 +223,24 @@ object MixRunner {
     ParsimonyCollapser.collapseNodes(rootNode)
 
     // sort the nodes
-    RichNode.reorderChildrenByAlleleString(rootNode)
+    //RichNode.reorderChildrenByAlleleString(rootNode)
 
     // add gray lines to branches where we're going to two identical alleles with different tissue sources
-    RichNode.assignBranchColors(rootNode)
+    //RichNode.assignBranchColors(rootNode)
 
     // the updated numbers
     println("after collapsing nodes " + rootNode.countSubNodes())
 
+    def set_node_color(node: RichNode, parent: Option[RichNode]): Tuple2[String,String] = {
+      if (node.name != null && (node.name contains "cdr3")) {
+        ("cdr3","green")
+      } else {
+        ("cdr3","black")
+      }
+    }
+
     // assign the colors to the nodes
-    //RichNode.applyFunction(rootNode, annotationMapping.setNodeColor)
+    RichNode.applyFunction(rootNode, set_node_color)
 
     rootNode
   }

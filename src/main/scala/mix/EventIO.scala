@@ -60,7 +60,7 @@ object EventIO {
   /**
     * convert text input into nodes
     */
-  def  readCellObject(allCellsFile: File, sample: String): EventContainer = {
+  def readCellObject(allCellsFile: File, sample: String, tokenSplitter: String = "_"): EventContainer = {
 
     val cellAnnotations = new mutable.HashMap[String,HashMap[String,String]]()
 
@@ -83,7 +83,7 @@ object EventIO {
       val cells = lineTks(2)
 
       // assign columns to the events
-      EventInformation.addEvents(hmid.replace("\"","").split("-"), 1)
+      EventInformation.addEvents(hmid.replace("\"","").split(tokenSplitter), 1)
 
       // handle any annotations specified in the file
       val annotations = new mutable.HashMap[String,String]()
@@ -92,7 +92,7 @@ object EventIO {
 
       cellAnnotations(cellID) = annotations
 
-      val evt = Barcode(hmid.replace("\"","").split("-"), 1, 1.0 / (inputFile.size - 1), sample, cellID)
+      val evt = Barcode(hmid.replace("\"","").split(tokenSplitter), 1, 1.0 / (inputFile.size - 1), sample, cellID)
       linesProcessed += 1
       builder += evt
     }
@@ -112,10 +112,17 @@ object EventIO {
     * @return the scaled value as a MIX recognized character
     */
   def scaleValues(value: Int, min: Int, max: Int): Char = {
-    val maxLog = math.log(max)
+    val maxLog = math.log(Math.max(max,value)) // TODO: fix this
     val valueLog = math.log(value)
     val ret = scala.math.round(((valueLog.toDouble - min.toDouble) / maxLog.toDouble) * (EventIO.characterArray.length.toDouble - 1.0)).toInt
-    EventIO.characterArray(ret)
+    try {
+      EventIO.characterArray(ret)
+
+    } catch {
+      case e: java.lang.StringIndexOutOfBoundsException => {
+        throw new IllegalStateException("Unable to calculate correct character for " + value + "( min = " + min + " max = " + max + " )")
+      }
+    }
   }
 
 
@@ -136,7 +143,7 @@ object EventIO {
     // -----------------------------------------------------------------------------------
     // map the each of the events to associated weights in PHYLIP space and write to disk
     // -----------------------------------------------------------------------------------
-    //println(eventsContainer.allEvents.mkString("."))
+    println(EventInformation.orderedEvents.mkString("."))
     //assert(eventsContainer.allEvents.size == EventInformation.numberOfColumns(),eventsContainer.allEvents.size + " NOT EQUAL " + EventInformation.numberOfColumns())
     val weights = EventInformation.orderedEvents.map{case(evtInfo) => {
       scaleValues(eventsContainer.eventToCount(evtInfo.eventString), 0, maxCount)
@@ -149,7 +156,7 @@ object EventIO {
       }
     }.toList*/
 
-    //println(weights.mkString(","))
+    println(weights.mkString(","))
     weightFile.write(weights.mkString("") + "\n")
     weightFile.close()
 

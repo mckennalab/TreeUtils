@@ -21,21 +21,22 @@ object EventSplitter {
   def splitInputByAnnotation(eventContainer: EventContainer,
                              annotationName: String): HashMap[String,EventContainer] = {
 
-    if (!(eventContainer.rawAnnotations contains annotationName)) {
-      throw new IllegalStateException("Unable to find annotation column to split events on named: " + annotationName)
-    }
+
+    //if (!(eventContainer.rawAnnotations contains annotationName)) {
+    //  throw new IllegalStateException("Unable to find annotation column to split events on named: " + annotationName)
+    //}
 
     val barcodeLookup = eventContainer.events.map{case(e) => (e.name,e)}.toMap
 
     val returnMapping = new HashMap[String,Array[Barcode]]()
-    eventContainer.rawAnnotations.map{case(key,mapping) => {
+    eventContainer.rawAnnotations.zipWithIndex.map{case((key,mapping),index) => {
       mapping.get(annotationName) match {
         case Some(str) =>
           if (returnMapping contains str) {
             var entry = returnMapping.get(str).get
-            returnMapping(str) = entry ++ Array(barcodeLookup.get(str).get)
+            returnMapping(str) = entry ++ Array(barcodeLookup.get(key).get)
           } else {
-            returnMapping(str) = Array(barcodeLookup.get(str).get)
+            returnMapping(str) = Array(barcodeLookup.get(key).get)
           }
         case None => {}
       }
@@ -57,13 +58,14 @@ object EventSplitter {
 
     // split the events into the root for the first X sites,
     // and sub-tree for individual nodes
-    val base_name = "annotation_root"
-    val bareRoot = new Node(base_name)
+    val bareRoot = new Node("annotation_root")
     val linker = new NodeLinker()
     val baseNode = RichNode(bareRoot, annotationMapping,None,numberOfTargets)
-    val childToTree = new mutable.HashMap[String, RichNode]()
+    baseNode.graftedNode = true
+    println("number of columns " + EventInformation.numberOfColumns())
+      val split_annotations = EventSplitter.splitInputByAnnotation(eventContainer, annotationName)
 
-    EventSplitter.splitInputByAnnotation(eventContainer, annotationName).foreach {
+    split_annotations.foreach {
       case (annotation, childrenByAnnotation) => {
 
         // MIX can't make a meaningful tree out of less than three nodes
@@ -72,30 +74,48 @@ object EventSplitter {
           println("Processing the " + annotation + " tree with kids ")
           val (childNode, childLinker) = MixRunner.mixOutputToTree(MixRunner.runMix(mixDir, childrenByAnnotation, CacheApproach.OVERWRITE),
             childrenByAnnotation, annotationMapping, annotation, graftedNodeColor)
+          childNode.name = annotation
 
-          childToTree(annotation) = childNode
-          childToTree(annotation).graftedNode = true
           childLinker.shiftEdges(linker.getMaximumInternalNode, annotation)
-          linker.addEdge(Edge(base_name,childNode.name,base_name))
+          linker.addEdge(Edge(baseNode.name,childNode.name,baseNode.name))
           linker.addEdges(childLinker)
 
-          baseNode.graftToName(annotation, childToTree(annotation))
+          childNode.name = annotation
+          childNode.graftedNode = true
+          childNode.dontDeleteNode = true
+
+          childNode.eventString = Some(Array.fill[String](numberOfTargets)("NONE"))
+          println("GRRaaaaaaaaR222 " + childNode.eventString)
+          baseNode.graftOnChild(childNode)
         } else {
           val baseAnnotation = new RichNode(new Node(annotation),
             annotationMapping, Some(baseNode), numberOfTargets)
+
+          baseAnnotation.eventString = Some(Array.fill[String](numberOfTargets)("NONE"))
+          baseAnnotation.graftedNode = true
+          baseAnnotation.dontDeleteNode = true
           childrenByAnnotation.events.foreach { child => {
 
-            linker.addEdge(Edge(baseAnnotation.name, child.name, baseAnnotation.name))
+            linker.addEdge(Edge(baseAnnotation.name, child.name, baseNode.name))
 
-            val newNode = RichNode(new Node(child.name), annotationMapping, Some(baseAnnotation), child.events.size, graftedNodeColor)
-            newNode.graftedNode = true
-            baseNode.graftOnChild(baseAnnotation)
+            println("GRRR2AA " + EventInformation.numberOfColumns())
+            println("GRRR222 " + child.events)
+
+            val newNode = RichNode(new Node(child.name), annotationMapping, Some(baseAnnotation), EventInformation.numberOfColumns(), graftedNodeColor)
+            newNode.eventString = Some(child.events)
+            baseAnnotation.graftOnChild(newNode)
           }
           }
+          baseNode.graftOnChild(baseAnnotation)
+          linker.addEdge(Edge(baseNode.name, baseAnnotation.name, baseNode.name))
         }
       }
     }
-    baseNode
+
+    // post-process the final tree
+    MixRunner.postProcessTree(baseNode, linker, eventContainer, annotationMapping)
+
+
   }
 
 

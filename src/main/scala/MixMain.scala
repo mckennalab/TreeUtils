@@ -89,7 +89,7 @@ class MixMain extends Runnable with LazyLogging {
 
   @CommandLine.Option(names = Array("-clusterLabel", "--clusterLabel"), required = false, paramLabel = "FILE",
     description = Array("use a column in the text file to define clusters as the first level of the tree"))
-  private var clusterLabel : Option[String] = None
+  private var clusterLabel : String = ""
 
 
   @CommandLine.Option(names = Array("-sortByAnnotations", "--sortByAnnotations"), required = false, paramLabel = "FILE",
@@ -128,13 +128,13 @@ class MixMain extends Runnable with LazyLogging {
         firstX,
         sample,
         annotationMapping)
-    } else if (clusterLabel.isDefined) {
+    } else if (clusterLabel != "") {
       EventSplitter.splitByAnnotation(new File(mixRunLocation),
         readEventsObj,
-        clusterLabel.get,
+        clusterLabel,
         sample,
         annotationMapping,
-        10)
+        10) // TODO: Fix this parameter
     } else {
       println("Running single tree...")
       val cacheApproach = if (useCached) CacheApproach.USE_CACHE else CacheApproach.NO_OVERWRITE
